@@ -1,0 +1,13 @@
+{
+  "domain": "arbeitszeit_at",
+  "name": "Arbeitszeit & Überstunden (AT)",
+  "codeowners": ["@rschnappi"],
+  "config_flow": true,
+  "dependencies": ["calendar"],
+  "documentation": "https://github.com/rschnappi/arbeitszeit_at",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/rschnappi/arbeitszeit_at/issues",
+  "requirements": [],
+  "version": "1.1.0"
+}
