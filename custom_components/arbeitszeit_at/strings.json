@@ -1,0 +1,105 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Arbeitszeit & Überstunden",
+        "data": {
+          "calendar_entity": "Arbeitszeit-Kalender",
+          "holiday_calendar_entity": "Feiertags-Kalender (optional)",
+          "holiday_filter": "Feiertags-Filter",
+          "builtin_holidays": "Eingebaute österreichische Feiertage verwenden",
+          "hours_per_day": "Sollstunden pro Arbeitstag",
+          "workdays": "Arbeitstage",
+          "start_date": "Erfassungsbeginn (optional)",
+          "leave_year_start": "Beginn Urlaubsjahr (TT.MM.)",
+          "care_leave_entitlement": "Pflegeurlaub-Anspruch pro Jahr (Tage)",
+          "xmas_eve_nye_free": "24.12. und 31.12. arbeitsfrei",
+          "start_balance": "Überstunden-Startsaldo / Übertrag (h)",
+          "leave_balance": "Resturlaub laut Lohnzettel (Tage)",
+          "leave_balance_date": "Stand-Datum des Resturlaubs",
+          "payouts": "Ausbezahlte Überstunden",
+          "keywords_vacation": "Schlüsselwörter Urlaub",
+          "keywords_za": "Schlüsselwörter Zeitausgleich",
+          "keywords_care": "Schlüsselwörter Pflegeurlaub",
+          "keywords_sick": "Schlüsselwörter Krankenstand",
+          "keywords_ignore": "Termine ignorieren (Schlüsselwörter)",
+          "scan_interval": "Aktualisierungsintervall (Minuten)"
+        },
+        "data_description": {
+          "calendar_entity": "Zeitgebundene Termine = Arbeitszeit, ganztägige Termine mit Schlüsselwort = Abwesenheit.",
+          "start_date": "Vor diesem Datum wird weder Soll noch Ist gezählt.",
+          "leave_year_start": "z. B. 16.08. oder 01.01.",
+          "leave_balance_date": "Urlaubstage nach diesem Datum werden abgezogen.",
+          "payouts": "z. B. „Mai: 20h, August 16 Stunden“",
+          "keywords_vacation": "Kommagetrennt, Groß-/Kleinschreibung egal",
+          "keywords_ignore": "z. B. „Privat, Geburtstag“ – zählen weder als Arbeit noch Abwesenheit",
+          "holiday_calendar_entity": "Ganztägige Termine in diesem Kalender gelten als arbeitsfreie Feiertage.",
+          "holiday_filter": "Kommagetrennt; ein Begriff muss in Titel oder Beschreibung vorkommen. Beim Google-Kalender „Feiertage in Österreich“ blendet „Gesetzlicher Feiertag“ die Gedenktage aus. Leer = alle ganztägigen Termine.",
+          "builtin_holidays": "Wird mit dem Feiertags-Kalender kombiniert. Empfohlen, da Google-Feiertagskalender oft nur einen begrenzten Zeitraum liefern."
+        }
+      }
+    },
+    "error": {
+      "invalid_day_month": "Bitte als TT.MM. angeben, z. B. 16.08.",
+      "no_workdays": "Mindestens einen Arbeitstag wählen.",
+      "no_holiday_source": "Feiertags-Kalender wählen oder eingebaute Feiertage aktivieren.",
+      "same_calendar": "Feiertags-Kalender muss sich vom Arbeitszeit-Kalender unterscheiden."
+    },
+    "abort": {
+      "already_configured": "Dieser Kalender ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Einstellungen",
+        "data": {
+          "calendar_entity": "Arbeitszeit-Kalender",
+          "holiday_calendar_entity": "Feiertags-Kalender (optional)",
+          "holiday_filter": "Feiertags-Filter",
+          "builtin_holidays": "Eingebaute österreichische Feiertage verwenden",
+          "hours_per_day": "Sollstunden pro Arbeitstag",
+          "workdays": "Arbeitstage",
+          "start_date": "Erfassungsbeginn (optional)",
+          "leave_year_start": "Beginn Urlaubsjahr (TT.MM.)",
+          "care_leave_entitlement": "Pflegeurlaub-Anspruch pro Jahr (Tage)",
+          "xmas_eve_nye_free": "24.12. und 31.12. arbeitsfrei",
+          "start_balance": "Überstunden-Startsaldo / Übertrag (h)",
+          "leave_balance": "Resturlaub laut Lohnzettel (Tage)",
+          "leave_balance_date": "Stand-Datum des Resturlaubs",
+          "payouts": "Ausbezahlte Überstunden",
+          "keywords_vacation": "Schlüsselwörter Urlaub",
+          "keywords_za": "Schlüsselwörter Zeitausgleich",
+          "keywords_care": "Schlüsselwörter Pflegeurlaub",
+          "keywords_sick": "Schlüsselwörter Krankenstand",
+          "keywords_ignore": "Termine ignorieren (Schlüsselwörter)",
+          "scan_interval": "Aktualisierungsintervall (Minuten)"
+        },
+        "data_description": {
+          "calendar_entity": "Zeitgebundene Termine = Arbeitszeit, ganztägige Termine mit Schlüsselwort = Abwesenheit.",
+          "start_date": "Vor diesem Datum wird weder Soll noch Ist gezählt.",
+          "leave_year_start": "z. B. 16.08. oder 01.01.",
+          "leave_balance_date": "Urlaubstage nach diesem Datum werden abgezogen.",
+          "payouts": "z. B. „Mai: 20h, August 16 Stunden“",
+          "keywords_vacation": "Kommagetrennt, Groß-/Kleinschreibung egal",
+          "keywords_ignore": "z. B. „Privat, Geburtstag“ – zählen weder als Arbeit noch Abwesenheit",
+          "holiday_calendar_entity": "Ganztägige Termine in diesem Kalender gelten als arbeitsfreie Feiertage.",
+          "holiday_filter": "Kommagetrennt; ein Begriff muss in Titel oder Beschreibung vorkommen. Beim Google-Kalender „Feiertage in Österreich“ blendet „Gesetzlicher Feiertag“ die Gedenktage aus. Leer = alle ganztägigen Termine.",
+          "builtin_holidays": "Wird mit dem Feiertags-Kalender kombiniert. Empfohlen, da Google-Feiertagskalender oft nur einen begrenzten Zeitraum liefern."
+        }
+      }
+    },
+    "error": {
+      "invalid_day_month": "Bitte als TT.MM. angeben, z. B. 16.08.",
+      "no_workdays": "Mindestens einen Arbeitstag wählen.",
+      "no_holiday_source": "Feiertags-Kalender wählen oder eingebaute Feiertage aktivieren.",
+      "same_calendar": "Feiertags-Kalender muss sich vom Arbeitszeit-Kalender unterscheiden."
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Neu berechnen",
+      "description": "Kalender sofort neu einlesen und alle Werte neu berechnen."
+    }
+  }
+}

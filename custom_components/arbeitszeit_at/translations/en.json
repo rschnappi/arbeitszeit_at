@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Working time & overtime",
+        "data": {
+          "calendar_entity": "Working time calendar",
+          "holiday_calendar_entity": "Holiday calendar (optional)",
+          "holiday_filter": "Holiday filter (keywords in title/description)",
+          "builtin_holidays": "Use built-in Austrian public holidays",
+          "hours_per_day": "Target hours per working day",
+          "workdays": "Working days",
+          "start_date": "Tracking start (optional)",
+          "leave_year_start": "Leave year start (DD.MM.)",
+          "care_leave_entitlement": "Care leave entitlement (days/year)",
+          "xmas_eve_nye_free": "Dec 24 and Dec 31 are days off",
+          "start_balance": "Overtime start balance (h)",
+          "leave_balance": "Remaining leave per payslip (days)",
+          "leave_balance_date": "Remaining leave as of",
+          "payouts": "Paid-out overtime",
+          "keywords_vacation": "Keywords vacation",
+          "keywords_za": "Keywords time off in lieu",
+          "keywords_care": "Keywords care leave",
+          "keywords_sick": "Keywords sick leave",
+          "keywords_ignore": "Ignore events (keywords)",
+          "scan_interval": "Update interval (minutes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_day_month": "Use DD.MM., e.g. 16.08.",
+      "no_workdays": "Select at least one working day.",
+      "no_holiday_source": "Select a holiday calendar or enable built-in holidays.",
+      "same_calendar": "Holiday calendar must differ from the working time calendar."
+    },
+    "abort": {
+      "already_configured": "This calendar is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Settings",
+        "data": {
+          "calendar_entity": "Working time calendar",
+          "holiday_calendar_entity": "Holiday calendar (optional)",
+          "holiday_filter": "Holiday filter (keywords in title/description)",
+          "builtin_holidays": "Use built-in Austrian public holidays",
+          "hours_per_day": "Target hours per working day",
+          "workdays": "Working days",
+          "start_date": "Tracking start (optional)",
+          "leave_year_start": "Leave year start (DD.MM.)",
+          "care_leave_entitlement": "Care leave entitlement (days/year)",
+          "xmas_eve_nye_free": "Dec 24 and Dec 31 are days off",
+          "start_balance": "Overtime start balance (h)",
+          "leave_balance": "Remaining leave per payslip (days)",
+          "leave_balance_date": "Remaining leave as of",
+          "payouts": "Paid-out overtime",
+          "keywords_vacation": "Keywords vacation",
+          "keywords_za": "Keywords time off in lieu",
+          "keywords_care": "Keywords care leave",
+          "keywords_sick": "Keywords sick leave",
+          "keywords_ignore": "Ignore events (keywords)",
+          "scan_interval": "Update interval (minutes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_day_month": "Use DD.MM., e.g. 16.08.",
+      "no_workdays": "Select at least one working day.",
+      "no_holiday_source": "Select a holiday calendar or enable built-in holidays.",
+      "same_calendar": "Holiday calendar must differ from the working time calendar."
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Recalculate",
+      "description": "Re-read the calendar and recalculate all values."
+    }
+  }
+}
