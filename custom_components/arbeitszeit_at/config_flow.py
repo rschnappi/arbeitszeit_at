@@ -12,11 +12,12 @@ from homeassistant.helpers import selector as sel
 
 from .calc import parse_day_month
 from .const import (
-    CONF_BUILTIN_HOLIDAYS, CONF_CALENDAR, CONF_CARE_ENTITLEMENT, CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_HOURS_PER_DAY, CONF_ICS_URL, CONF_KW_CARE, CONF_KW_IGNORE,
+    CONF_BUILTIN_HOLIDAYS, CONF_CALENDAR, CONF_CARE_ENTITLEMENT, CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_ICS_URL, CONF_KW_CARE, CONF_KW_IGNORE,
     CONF_KW_SICK, CONF_KW_VACATION, CONF_KW_ZA, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE,
     CONF_LEAVE_YEAR_START, CONF_PAYOUTS, CONF_SCAN_INTERVAL, CONF_START_BALANCE, CONF_START_DATE,
-    CONF_WORKDAYS, CONF_XMAS_EVE_FREE, DEFAULTS, DOMAIN,
+    CONF_WEEKLY_HOURS, CONF_WORKDAYS, CONF_XMAS_EVE_FREE, DEFAULTS, DOMAIN,
 )
+from .coordinator import merged_config
 
 WEEKDAYS = [
     sel.SelectOptionDict(value=str(i), label=n)
@@ -42,7 +43,7 @@ def _schema(d: dict[str, Any]) -> vol.Schema:
         opt(CONF_HOLIDAY_CALENDAR): sel.EntitySelector(sel.EntitySelectorConfig(domain="calendar")),
         opt(CONF_HOLIDAY_FILTER): sel.TextSelector(),
         vol.Required(CONF_BUILTIN_HOLIDAYS, default=d.get(CONF_BUILTIN_HOLIDAYS, True)): sel.BooleanSelector(),
-        vol.Required(CONF_HOURS_PER_DAY, default=d.get(CONF_HOURS_PER_DAY, 8.0)): _num(0.5, 24, 0.25, "h"),
+        vol.Required(CONF_WEEKLY_HOURS, default=d.get(CONF_WEEKLY_HOURS, DEFAULTS[CONF_WEEKLY_HOURS])): _num(0, 60, 0.5, "h"),
         vol.Required(CONF_WORKDAYS, default=d.get(CONF_WORKDAYS, DEFAULTS[CONF_WORKDAYS])):
             sel.SelectSelector(sel.SelectSelectorConfig(options=WEEKDAYS, multiple=True)),
         opt(CONF_START_DATE): sel.DateSelector(),
@@ -101,7 +102,7 @@ class ArbeitszeitConfigFlow(ConfigFlow, domain=DOMAIN):
 class ArbeitszeitOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
-        current = {**DEFAULTS, **self.config_entry.data, **self.config_entry.options}
+        current = merged_config(self.config_entry)
         if user_input is not None:
             errors = _validate(user_input)
             if not errors:

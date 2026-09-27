@@ -11,7 +11,8 @@ CONF_ICS_URL = "ics_url"
 CONF_HOLIDAY_CALENDAR = "holiday_calendar_entity"
 CONF_HOLIDAY_FILTER = "holiday_filter"
 CONF_BUILTIN_HOLIDAYS = "builtin_holidays"
-CONF_HOURS_PER_DAY = "hours_per_day"
+CONF_HOURS_PER_DAY = "hours_per_day"  # ersetzt seit 1.3.0 durch CONF_WEEKLY_HOURS, nur noch für Migration gelesen
+CONF_WEEKLY_HOURS = "weekly_hours"
 CONF_WORKDAYS = "workdays"
 CONF_START_DATE = "start_date"
 CONF_LEAVE_YEAR_START = "leave_year_start"
@@ -33,7 +34,7 @@ CONF_PAYOUTS = "payouts"
 DYNAMIC_KEYS = {CONF_START_BALANCE, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE, CONF_PAYOUTS}
 
 DEFAULTS = {
-    CONF_HOURS_PER_DAY: 8.0,
+    CONF_WEEKLY_HOURS: 40.0,
     CONF_WORKDAYS: ["0", "1", "2", "3", "4"],
     CONF_LEAVE_YEAR_START: "16.08.",
     CONF_CARE_ENTITLEMENT: 5,

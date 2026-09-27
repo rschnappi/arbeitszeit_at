@@ -9,7 +9,7 @@
           "holiday_calendar_entity": "Feiertags-Kalender (optional)",
           "holiday_filter": "Feiertags-Filter",
           "builtin_holidays": "Eingebaute österreichische Feiertage verwenden",
-          "hours_per_day": "Sollstunden pro Arbeitstag",
+          "weekly_hours": "Wochenstunden",
           "workdays": "Arbeitstage",
           "start_date": "Erfassungsbeginn (optional)",
           "leave_year_start": "Beginn Urlaubsjahr (TT.MM.)",
@@ -37,7 +37,8 @@
           "keywords_ignore": "z. B. „Privat, Geburtstag“ – zählen weder als Arbeit noch Abwesenheit",
           "holiday_calendar_entity": "Ganztägige Termine in diesem Kalender gelten als arbeitsfreie Feiertage.",
           "holiday_filter": "Kommagetrennt; ein Begriff muss in Titel oder Beschreibung vorkommen. Beim Google-Kalender „Feiertage in Österreich“ blendet „Gesetzlicher Feiertag“ die Gedenktage aus. Leer = alle ganztägigen Termine.",
-          "builtin_holidays": "Wird mit dem Feiertags-Kalender kombiniert. Empfohlen, da Google-Feiertagskalender oft nur einen begrenzten Zeitraum liefern."
+          "builtin_holidays": "Wird mit dem Feiertags-Kalender kombiniert. Empfohlen, da Google-Feiertagskalender oft nur einen begrenzten Zeitraum liefern.",
+          "weekly_hours": "Frei eintragbar, z. B. 40, 38,5, 20 oder 16 - wird gleichmäßig auf die gewählten Arbeitstage aufgeteilt."
         }
       }
     },
@@ -61,7 +62,7 @@
           "holiday_calendar_entity": "Feiertags-Kalender (optional)",
           "holiday_filter": "Feiertags-Filter",
           "builtin_holidays": "Eingebaute österreichische Feiertage verwenden",
-          "hours_per_day": "Sollstunden pro Arbeitstag",
+          "weekly_hours": "Wochenstunden",
           "workdays": "Arbeitstage",
           "start_date": "Erfassungsbeginn (optional)",
           "leave_year_start": "Beginn Urlaubsjahr (TT.MM.)",
@@ -89,7 +90,8 @@
           "keywords_ignore": "z. B. „Privat, Geburtstag“ – zählen weder als Arbeit noch Abwesenheit",
           "holiday_calendar_entity": "Ganztägige Termine in diesem Kalender gelten als arbeitsfreie Feiertage.",
           "holiday_filter": "Kommagetrennt; ein Begriff muss in Titel oder Beschreibung vorkommen. Beim Google-Kalender „Feiertage in Österreich“ blendet „Gesetzlicher Feiertag“ die Gedenktage aus. Leer = alle ganztägigen Termine.",
-          "builtin_holidays": "Wird mit dem Feiertags-Kalender kombiniert. Empfohlen, da Google-Feiertagskalender oft nur einen begrenzten Zeitraum liefern."
+          "builtin_holidays": "Wird mit dem Feiertags-Kalender kombiniert. Empfohlen, da Google-Feiertagskalender oft nur einen begrenzten Zeitraum liefern.",
+          "weekly_hours": "Frei eintragbar, z. B. 40, 38,5, 20 oder 16 - wird gleichmäßig auf die gewählten Arbeitstage aufgeteilt."
         }
       }
     },

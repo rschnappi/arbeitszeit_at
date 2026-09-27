@@ -19,7 +19,8 @@ Feiertage kommen aus einem wählbaren Feiertags-Kalender und/oder den eingebaute
 | Zeitgebundene Abwesenheit (z. B. „Zeitausgleich“ 12–16 Uhr) | zählt mit ihrer Dauer |
 | Andere Ganztages-Termine, Wochenenden, Feiertage | werden ignoriert |
 
-- **Soll** = Sollstunden/Tag an Arbeitstagen ohne Feiertage (optional 24.12./31.12. frei)
+- **Soll** = frei eintragbare Wochenstunden (z. B. 40, 38,5, 20, 16 …) ÷ Anzahl gewählter Arbeitstage,
+  angerechnet an Arbeitstagen ohne Feiertage (optional 24.12./31.12. frei)
 - **Überstunden brutto** = Ist + Urlaub + ZA + Pflege + Krank − Soll
 - **Saldo netto** = Brutto + Startsaldo − verbrauchter ZA − ausbezahlte Stunden
 - **Resturlaub** = Stand laut Lohnzettel − Urlaubstage nach dem Stand-Datum (inkl. bereits eingetragener künftiger)

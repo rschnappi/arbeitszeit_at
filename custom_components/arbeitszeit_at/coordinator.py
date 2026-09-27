@@ -20,14 +20,20 @@ from .const import (
     CONF_BUILTIN_HOLIDAYS, CONF_CALENDAR, CONF_CARE_ENTITLEMENT, CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_HOURS_PER_DAY, CONF_ICS_URL, CONF_KW_CARE, CONF_KW_IGNORE,
     CONF_KW_SICK, CONF_KW_VACATION, CONF_KW_ZA, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE,
     CONF_LEAVE_YEAR_START, CONF_PAYOUTS, CONF_SCAN_INTERVAL, CONF_START_BALANCE, CONF_START_DATE,
-    CONF_WORKDAYS, CONF_XMAS_EVE_FREE, DEFAULTS, DOMAIN,
+    CONF_WEEKLY_HOURS, CONF_WORKDAYS, CONF_XMAS_EVE_FREE, DEFAULTS, DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def merged_config(entry: ConfigEntry) -> dict[str, Any]:
-    return {**DEFAULTS, **entry.data, **entry.options}
+    merged = {**DEFAULTS, **entry.data, **entry.options}
+    # Migration von CONF_HOURS_PER_DAY (bis 1.2.x) auf CONF_WEEKLY_HOURS: nur wenn der Entry
+    # selbst noch keinen weekly_hours-Wert gespeichert hat, aber den alten Schlüssel führt.
+    if CONF_WEEKLY_HOURS not in entry.data and CONF_WEEKLY_HOURS not in entry.options \
+            and CONF_HOURS_PER_DAY in merged:
+        merged[CONF_WEEKLY_HOURS] = float(merged[CONF_HOURS_PER_DAY]) * len(merged[CONF_WORKDAYS])
+    return merged
 
 
 def _to_date(value: Any) -> date | None:
@@ -39,9 +45,10 @@ def _to_date(value: Any) -> date | None:
 
 
 def build_calc_config(conf: dict[str, Any]) -> CalcConfig:
+    workdays = {int(d) for d in conf[CONF_WORKDAYS]}
     return CalcConfig(
-        hours_per_day=float(conf[CONF_HOURS_PER_DAY]),
-        workdays={int(d) for d in conf[CONF_WORKDAYS]},
+        hours_per_day=float(conf[CONF_WEEKLY_HOURS]) / len(workdays),
+        workdays=workdays,
         start_date=_to_date(conf.get(CONF_START_DATE)),
         leave_year_start=parse_day_month(conf[CONF_LEAVE_YEAR_START]),
         care_entitlement=float(conf[CONF_CARE_ENTITLEMENT]),
