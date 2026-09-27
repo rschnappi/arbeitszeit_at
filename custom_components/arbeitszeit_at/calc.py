@@ -73,6 +73,70 @@ def austrian_holidays(year: int, xmas_eve_nye_free: bool = False) -> dict[date, 
     return hol
 
 
+def _ics_unescape(value: str) -> str:
+    return (value.replace("\\N", "\n").replace("\\n", "\n")
+                 .replace("\\,", ",").replace("\\;", ";").replace("\\\\", "\\"))
+
+
+def _ics_to_iso(value: str) -> str:
+    """DTSTART/DTEND-Rohwert -> calc.py-Format ("YYYY-MM-DD" bzw. ISO-Datetime).
+
+    Deckt nur die zwei Formen ab, die Googles ICS-Export tatsächlich liefert: reines
+    Datum (`;VALUE=DATE:20260105`, ganztägig) und UTC-Zeit (`:20260112T113000Z`).
+    """
+    if len(value) == 8:
+        return f"{value[0:4]}-{value[4:6]}-{value[6:8]}"
+    offset = "+00:00" if value.endswith("Z") else ""
+    value = value.rstrip("Z")
+    return f"{value[0:4]}-{value[4:6]}-{value[6:8]}T{value[9:11]}:{value[11:13]}:{value[13:15]}{offset}"
+
+
+def events_from_ics(text: str) -> list[dict]:
+    """Rohes ICS (z. B. Googles "geheime Adresse im iCal-Format"-Export) -> Events im
+    calc.py-Format ({"start", "end", "summary", "description"}).
+
+    Umgeht Home Assistants `calendar.get_events`: dessen lokaler Sync für Google-Kalender
+    liefert nur Termine, die innerhalb eines rollierenden ~90-Tage-Fensters liegen ODER seit
+    dem letzten Sync neu angelegt/geändert wurden (Googles Sync-Token-Mechanismus reicht nur
+    Änderungen durch, nicht das Datum des Termins selbst) - siehe SYNC_EVENT_MIN_TIME in
+    homeassistant/components/google/calendar.py. Ein seit Jahren unverändertes Kalender-Event
+    kommt dort nie an, selbst wenn der Google-Account viel länger Zugriff hat. Der direkte
+    ICS-Export unterliegt dieser Beschränkung nicht.
+    """
+    lines = text.replace("\r\n", "\n").split("\n")
+    unfolded: list[str] = []
+    for line in lines:
+        if line[:1] in (" ", "\t") and unfolded:
+            unfolded[-1] += line[1:]
+        else:
+            unfolded.append(line)
+
+    events: list[dict] = []
+    cur: dict[str, str] | None = None
+    for line in unfolded:
+        if line == "BEGIN:VEVENT":
+            cur = {}
+            continue
+        if line == "END:VEVENT":
+            if cur and "start" in cur and "end" in cur:
+                events.append(cur)
+            cur = None
+            continue
+        if cur is None or ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        name = key.split(";")[0]
+        if name == "DTSTART":
+            cur["start"] = _ics_to_iso(value)
+        elif name == "DTEND":
+            cur["end"] = _ics_to_iso(value)
+        elif name == "SUMMARY":
+            cur["summary"] = _ics_unescape(value)
+        elif name == "DESCRIPTION":
+            cur["description"] = _ics_unescape(value)
+    return events
+
+
 def holidays_from_events(events: list[dict], filter_keywords: str = "") -> dict[date, str]:
     """Ganztägige Events eines Feiertagskalenders -> {Datum: Name}.
 

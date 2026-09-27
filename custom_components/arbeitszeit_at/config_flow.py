@@ -12,7 +12,7 @@ from homeassistant.helpers import selector as sel
 
 from .calc import parse_day_month
 from .const import (
-    CONF_BUILTIN_HOLIDAYS, CONF_CALENDAR, CONF_CARE_ENTITLEMENT, CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_HOURS_PER_DAY, CONF_KW_CARE, CONF_KW_IGNORE,
+    CONF_BUILTIN_HOLIDAYS, CONF_CALENDAR, CONF_CARE_ENTITLEMENT, CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_HOURS_PER_DAY, CONF_ICS_URL, CONF_KW_CARE, CONF_KW_IGNORE,
     CONF_KW_SICK, CONF_KW_VACATION, CONF_KW_ZA, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE,
     CONF_LEAVE_YEAR_START, CONF_PAYOUTS, CONF_SCAN_INTERVAL, CONF_START_BALANCE, CONF_START_DATE,
     CONF_WORKDAYS, CONF_XMAS_EVE_FREE, DEFAULTS, DOMAIN,
@@ -38,6 +38,7 @@ def _schema(d: dict[str, Any]) -> vol.Schema:
     return vol.Schema({
         vol.Required(CONF_CALENDAR, default=d.get(CONF_CALENDAR, vol.UNDEFINED)):
             sel.EntitySelector(sel.EntitySelectorConfig(domain="calendar")),
+        opt(CONF_ICS_URL): sel.TextSelector(sel.TextSelectorConfig(type=sel.TextSelectorType.PASSWORD)),
         opt(CONF_HOLIDAY_CALENDAR): sel.EntitySelector(sel.EntitySelectorConfig(domain="calendar")),
         opt(CONF_HOLIDAY_FILTER): sel.TextSelector(),
         vol.Required(CONF_BUILTIN_HOLIDAYS, default=d.get(CONF_BUILTIN_HOLIDAYS, True)): sel.BooleanSelector(),
@@ -106,7 +107,7 @@ class ArbeitszeitOptionsFlow(OptionsFlow):
             if not errors:
                 # leere optionale Felder explizit leeren
                 for key in (CONF_START_DATE, CONF_LEAVE_BALANCE_DATE, CONF_PAYOUTS, CONF_KW_IGNORE,
-                            CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER):
+                            CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_ICS_URL):
                     user_input.setdefault(key, "")
                 return self.async_create_entry(data=user_input)
             current.update(user_input)

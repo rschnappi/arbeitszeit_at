@@ -39,6 +39,22 @@ In den Einstellungen wählbar, beide Quellen lassen sich kombinieren:
   Mariä Empfängnis, Christtag, Stefanitag. Empfohlen als Ergänzung: Google-Feiertagskalender liefern
   oft nur einen begrenzten Zeitraum, vergangene Monate fehlen dann.
 
+## Google Calendar: fehlende Vergangenheit (ICS-URL)
+
+Home Assistants Google-Calendar-Integration hält für `calendar.get_events` nur ein rollierendes
+~90-Tage-Fenster lokal vor (`SYNC_EVENT_MIN_TIME` in HA-Core) – anschließend werden nur noch
+Termine nachgeliefert, die seit dem letzten Abgleich neu angelegt oder geändert wurden. Ein
+Arbeits-Termin, der z. B. im Jänner eingetragen und seither nie mehr angefasst wurde, kommt dort
+nie an, egal wie lange der Google-Account schon existiert – Google selbst hat die Daten, HAs
+lokaler Cache aber nicht.
+
+Abhilfe: **Feld „ICS-URL“** in den Integrations-Einstellungen. Trägt man dort Googles direkten
+iCal-Export-Link ein (Google Calendar → Kalendereinstellungen des Arbeitszeit-Kalenders →
+„Geheime Adresse im iCal-Format“), liest die Integration die Termine direkt per HTTP – ohne
+HAs Zwischenspeicher und dessen 90-Tage-Grenze. Der Arbeitszeit-Kalender selbst bleibt trotzdem
+gewählt (bestimmt u. a. den Entry-Titel); ist die ICS-URL gesetzt, wird er für die eigentliche
+Kalenderabfrage aber nicht mehr verwendet. Der Link enthält ein Geheimnis – nicht weitergeben.
+
 ## Installation
 
 **HACS:** HACS → ⋮ → *Benutzerdefinierte Repositories* → `https://github.com/rschnappi/arbeitszeit_at`, Kategorie *Integration* → installieren → HA neu starten.

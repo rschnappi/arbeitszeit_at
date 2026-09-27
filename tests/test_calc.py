@@ -113,3 +113,44 @@ def test_leave_and_netto():
     j = R["uberstunden_jahr"]["attributes"]
     netto = float(j["ueberstunden_guthaben"]) + 10 - float(j["za_stunden_jahr"]) - 36
     assert R["uberstunden_saldo_netto"]["state"] == round(netto, 2)
+
+
+# Synthetisches ICS im Google-Export-Stil (basic.ics): reines Datum für ganztägig,
+# UTC-Zeit ("Z") für zeitgebundene Termine, gefaltete Zeile bei SUMMARY.
+ICS_SAMPLE = (
+    "BEGIN:VCALENDAR\r\n"
+    "BEGIN:VEVENT\r\n"
+    "DTSTART;VALUE=DATE:20260105\r\n"
+    "DTEND;VALUE=DATE:20260106\r\n"
+    "SUMMARY:Urlaub\r\n"
+    "END:VEVENT\r\n"
+    "BEGIN:VEVENT\r\n"
+    "DTSTART:20260112T063000Z\r\n"
+    "DTEND:20260112T110000Z\r\n"
+    "SUMMARY:Arbeit\r\n"
+    "DESCRIPTION:Lange Beschreibung die über\r\n"
+    " mehrere Zeilen gefaltet ist\r\n"
+    "END:VEVENT\r\n"
+    "BEGIN:VEVENT\r\n"
+    "DTSTART:20260113T063000Z\r\n"
+    "DTEND:20260113T110000Z\r\n"
+    "SUMMARY:Termin\\, mit Komma\r\n"
+    "END:VEVENT\r\n"
+    "END:VCALENDAR\r\n"
+)
+
+
+def test_events_from_ics():
+    events = calc.events_from_ics(ICS_SAMPLE)
+    assert len(events) == 3
+    assert events[0] == {"start": "2026-01-05", "end": "2026-01-06", "summary": "Urlaub"}
+    assert events[1]["start"] == "2026-01-12T06:30:00+00:00"
+    assert events[1]["end"] == "2026-01-12T11:00:00+00:00"
+    assert events[1]["description"] == "Lange Beschreibung die übermehrere Zeilen gefaltet ist"
+    assert events[2]["summary"] == "Termin, mit Komma"
+
+
+def test_events_from_ics_feeds_into_calculate():
+    events = calc.events_from_ics(ICS_SAMPLE)
+    r = calc.calculate(events, calc.CalcConfig(), datetime(2026, 1, 13, 12, 0, tzinfo=TZ))
+    assert r["urlaub_jahr"]["state"] == 1

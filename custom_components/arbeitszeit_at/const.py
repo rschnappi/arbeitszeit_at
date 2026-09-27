@@ -7,6 +7,7 @@ PLATFORMS = ["sensor", "number", "text"]
 
 # Struktur-Optionen (Änderung => Reload)
 CONF_CALENDAR = "calendar_entity"
+CONF_ICS_URL = "ics_url"
 CONF_HOLIDAY_CALENDAR = "holiday_calendar_entity"
 CONF_HOLIDAY_FILTER = "holiday_filter"
 CONF_BUILTIN_HOLIDAYS = "builtin_holidays"

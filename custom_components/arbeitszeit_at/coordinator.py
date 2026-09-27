@@ -6,15 +6,18 @@ from datetime import date, datetime, time, timedelta
 import logging
 from typing import Any
 
+import aiohttp
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .calc import CalcConfig, calculate, fetch_window, holidays_from_events, parse_day_month
+from .calc import CalcConfig, calculate, events_from_ics, fetch_window, holidays_from_events, parse_day_month
 from .const import (
-    CONF_BUILTIN_HOLIDAYS, CONF_CALENDAR, CONF_CARE_ENTITLEMENT, CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_HOURS_PER_DAY, CONF_KW_CARE, CONF_KW_IGNORE,
+    CONF_BUILTIN_HOLIDAYS, CONF_CALENDAR, CONF_CARE_ENTITLEMENT, CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_HOURS_PER_DAY, CONF_ICS_URL, CONF_KW_CARE, CONF_KW_IGNORE,
     CONF_KW_SICK, CONF_KW_VACATION, CONF_KW_ZA, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE,
     CONF_LEAVE_YEAR_START, CONF_PAYOUTS, CONF_SCAN_INTERVAL, CONF_START_BALANCE, CONF_START_DATE,
     CONF_WORKDAYS, CONF_XMAS_EVE_FREE, DEFAULTS, DOMAIN,
@@ -72,32 +75,49 @@ class ArbeitszeitCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         )
         self.last_options: dict[str, Any] = dict(entry.options)
 
+    async def _async_fetch_ics_events(self, url: str, start: date, end: date) -> list[dict]:
+        """Termine direkt per ICS-Export holen (umgeht HAs 90-Tage-Sync-Cache, siehe calc.events_from_ics)."""
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.get(url) as resp:
+                resp.raise_for_status()
+                text = await resp.text()
+        except aiohttp.ClientError as err:
+            raise UpdateFailed(f"ICS-Kalender nicht lesbar: {err}") from err
+        events = events_from_ics(text)
+        start_s, end_s = start.isoformat(), end.isoformat()
+        return [ev for ev in events if start_s <= ev["start"][:10] <= end_s]
+
     async def _async_update_data(self) -> dict[str, dict]:
         conf = merged_config(self.config_entry)
         cfg = build_calc_config(conf)
         calendar = conf[CONF_CALENDAR]
+        ics_url = conf.get(CONF_ICS_URL) or None
         holiday_cal = conf.get(CONF_HOLIDAY_CALENDAR) or None
-        targets = [calendar] + ([holiday_cal] if holiday_cal and holiday_cal != calendar else [])
+        targets = ([] if ics_url else [calendar]) + ([holiday_cal] if holiday_cal and holiday_cal != calendar else [])
         now = dt_util.now()
         start, end = fetch_window(cfg, now.date())
         tz = dt_util.get_default_time_zone()
-        try:
-            resp = await self.hass.services.async_call(
-                "calendar",
-                "get_events",
-                {
-                    "start_date_time": datetime.combine(start, time.min, tz),
-                    "end_date_time": datetime.combine(end + timedelta(days=1), time.min, tz),
-                },
-                target={"entity_id": targets},
-                blocking=True,
-                return_response=True,
-            )
-        except HomeAssistantError as err:
-            raise UpdateFailed(f"Kalender {', '.join(targets)} nicht lesbar: {err}") from err
+        resp = {}
+        if targets:
+            try:
+                resp = await self.hass.services.async_call(
+                    "calendar",
+                    "get_events",
+                    {
+                        "start_date_time": datetime.combine(start, time.min, tz),
+                        "end_date_time": datetime.combine(end + timedelta(days=1), time.min, tz),
+                    },
+                    target={"entity_id": targets},
+                    blocking=True,
+                    return_response=True,
+                )
+            except HomeAssistantError as err:
+                raise UpdateFailed(f"Kalender {', '.join(targets)} nicht lesbar: {err}") from err
 
         resp = resp or {}
-        events = resp.get(calendar, {}).get("events", [])
+        events = await self._async_fetch_ics_events(ics_url, start, end) if ics_url \
+            else resp.get(calendar, {}).get("events", [])
         if holiday_cal:
             cfg.extra_holidays = holidays_from_events(
                 resp.get(holiday_cal, {}).get("events", []), conf.get(CONF_HOLIDAY_FILTER) or ""

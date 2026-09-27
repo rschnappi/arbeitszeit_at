@@ -5,6 +5,7 @@
         "title": "Arbeitszeit & Überstunden",
         "data": {
           "calendar_entity": "Arbeitszeit-Kalender",
+          "ics_url": "ICS-URL (optional, überschreibt Arbeitszeit-Kalender)",
           "holiday_calendar_entity": "Feiertags-Kalender (optional)",
           "holiday_filter": "Feiertags-Filter",
           "builtin_holidays": "Eingebaute österreichische Feiertage verwenden",
@@ -27,6 +28,7 @@
         },
         "data_description": {
           "calendar_entity": "Zeitgebundene Termine = Arbeitszeit, ganztägige Termine mit Schlüsselwort = Abwesenheit.",
+          "ics_url": "Direkter iCal-Export-Link (z. B. Googles \"geheime Adresse im iCal-Format\"). Umgeht Home Assistants Kalender-Cache, der bei Google-Kalendern nur rollierend ~90 Tage Historie hält – seit Langem unveränderte ältere Termine kommen darüber nie an.",
           "start_date": "Vor diesem Datum wird weder Soll noch Ist gezählt.",
           "leave_year_start": "z. B. 16.08. oder 01.01.",
           "leave_balance_date": "Urlaubstage nach diesem Datum werden abgezogen.",
@@ -55,6 +57,7 @@
         "title": "Einstellungen",
         "data": {
           "calendar_entity": "Arbeitszeit-Kalender",
+          "ics_url": "ICS-URL (optional, überschreibt Arbeitszeit-Kalender)",
           "holiday_calendar_entity": "Feiertags-Kalender (optional)",
           "holiday_filter": "Feiertags-Filter",
           "builtin_holidays": "Eingebaute österreichische Feiertage verwenden",
@@ -77,6 +80,7 @@
         },
         "data_description": {
           "calendar_entity": "Zeitgebundene Termine = Arbeitszeit, ganztägige Termine mit Schlüsselwort = Abwesenheit.",
+          "ics_url": "Direkter iCal-Export-Link (z. B. Googles \"geheime Adresse im iCal-Format\"). Umgeht Home Assistants Kalender-Cache, der bei Google-Kalendern nur rollierend ~90 Tage Historie hält – seit Langem unveränderte ältere Termine kommen darüber nie an.",
           "start_date": "Vor diesem Datum wird weder Soll noch Ist gezählt.",
           "leave_year_start": "z. B. 16.08. oder 01.01.",
           "leave_balance_date": "Urlaubstage nach diesem Datum werden abgezogen.",

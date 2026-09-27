@@ -5,6 +5,7 @@
         "title": "Working time & overtime",
         "data": {
           "calendar_entity": "Working time calendar",
+          "ics_url": "ICS URL (optional, overrides working time calendar)",
           "holiday_calendar_entity": "Holiday calendar (optional)",
           "holiday_filter": "Holiday filter (keywords in title/description)",
           "builtin_holidays": "Use built-in Austrian public holidays",
@@ -43,6 +44,7 @@
         "title": "Settings",
         "data": {
           "calendar_entity": "Working time calendar",
+          "ics_url": "ICS URL (optional, overrides working time calendar)",
           "holiday_calendar_entity": "Holiday calendar (optional)",
           "holiday_filter": "Holiday filter (keywords in title/description)",
           "builtin_holidays": "Use built-in Austrian public holidays",
