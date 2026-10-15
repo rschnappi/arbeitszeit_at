@@ -66,6 +66,10 @@ async def test_flow_and_sensors(hass: HomeAssistant, frozen) -> None:
         assert hass.states.get("sensor.uberstunden_monat").state == "23.5"
         assert hass.states.get("sensor.urlaub_rest").state == "23"
         assert hass.states.get("number.uberstunden_startsaldo").state == "10.0"
+        abw = hass.states.get("sensor.abwesenheiten_jahr")
+        assert abw is not None
+        assert "eintraege" in abw.attributes and "summen" in abw.attributes
+        assert "zeitraeume" in hass.states.get("sensor.urlaub_jahr").attributes
 
         # Text-Entity setzt Auszahlung -> nur Refresh, kein Reload
         entry = hass.config_entries.async_entries(DOMAIN)[0]

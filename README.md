@@ -73,6 +73,7 @@ Arbeitszeit-Kalender und optional Feiertags-Kalender wählen. Alles ist später 
 | `sensor.arbeitszeit_woche_ist` / `_monat_ist` / `_jahr_ist` | gearbeitete Stunden |
 | `sensor.urlaub_rest`, `sensor.urlaub_jahr`, `sensor.urlaub_monat` | Urlaub |
 | `sensor.za_jahr`, `sensor.pflegeurlaub_jahr`, `sensor.krankenstand_jahr` | Abwesenheiten mit Tagesliste |
+| `sensor.abwesenheiten_jahr` | alle Abwesenheiten des Jahres mit Datum (Urlaub, ZA, Pflegeurlaub, Krankenstand) |
 | `sensor.za_ausbezahlt_jahr` | ausbezahlte Stunden |
 | `number.uberstunden_startsaldo` | Übertrag aus dem Vorjahr (editierbar) |
 | `number.resturlaub_stand` | Resturlaub laut Lohnzettel – beim Ändern wird das Stand-Datum auf heute gesetzt |
@@ -80,6 +81,34 @@ Arbeitszeit-Kalender und optional Feiertags-Kalender wählen. Alles ist später 
 
 Attribute wie `monats_uebersicht`, `saldo_monatsende`, `soll_stunden_bis_heute`, `heute_offen`
 sind kompatibel zu bestehenden Markdown-Karten.
+
+### Abwesenheiten mit Datum
+
+`sensor.urlaub_jahr`, `sensor.za_jahr`, `sensor.pflegeurlaub_jahr` und `sensor.krankenstand_jahr`
+haben zusätzlich das Attribut `zeitraeume`, `sensor.abwesenheiten_jahr` fasst alle Arten in
+`eintraege` zusammen (sortiert nach Datum). Jeder Eintrag ist ein zusammenhängender Zeitraum:
+
+```yaml
+- art: Urlaub
+  von: "2026-08-03"
+  bis: "2026-08-18"
+  zeitraum: "03.08. – 18.08."
+  tage: 12          # Werktage ohne Wochenenden/Feiertage, stundenweise anteilig
+  stunden: "96.00"
+  status: genommen  # genommen | laufend | geplant
+```
+
+Wochenenden und Feiertage unterbrechen einen Zeitraum nicht (Urlaub 05.01. + 07.01. → „05.01. – 07.01.“, 2 Tage),
+ein normaler Arbeitstag dazwischen schon. Weitere Attribute von `sensor.abwesenheiten_jahr`: `summen`
+(Tage je Art), `genommen_tage`, `geplant_tage` und `naechste` (nächster laufender oder geplanter Eintrag).
+
+Beispiel für eine Markdown-Karte:
+
+```jinja
+{% for e in state_attr('sensor.abwesenheiten_jahr', 'eintraege') %}
+| {{ e.art }} | {{ e.zeitraum }} | {{ e.tage }} | {{ '✅' if e.status == 'genommen' else '🗓️' }} |
+{% endfor %}
+```
 
 Dienst `arbeitszeit_at.refresh` liest den Kalender sofort neu ein.
 

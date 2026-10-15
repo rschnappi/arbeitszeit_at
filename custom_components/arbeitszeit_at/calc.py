@@ -31,6 +31,12 @@ CAT_CARE = "pflege"
 CAT_SICK = "krank"
 CAT_IGNORE = "ignore"
 ABSENCES = (CAT_VACATION, CAT_ZA, CAT_CARE, CAT_SICK)
+ABSENCE_LABELS = {
+    CAT_VACATION: "Urlaub",
+    CAT_ZA: "Zeitausgleich",
+    CAT_CARE: "Pflegeurlaub",
+    CAT_SICK: "Krankenstand",
+}
 
 
 # --------------------------------------------------------------------------- Feiertage
@@ -404,6 +410,25 @@ class Calculator:
     def absence_dates(self, start: date, end: date, cat: str) -> list[date]:
         return [d for d in sorted(self.days) if start <= d <= end and self.absence_day(d, cat) > 0]
 
+    def absence_blocks(self, start: date, end: date, cat: str) -> list[tuple[date, date, float]]:
+        """Zusammenhängende Zeiträume (von, bis, Tage) einer Abwesenheitsart.
+
+        Tage ohne Soll (Wochenende, Feiertag) dazwischen unterbrechen einen Zeitraum nicht,
+        ein Arbeitstag ohne diese Abwesenheit schon.
+        """
+        blocks: list[tuple[date, date, float]] = []
+        for d in self.absence_dates(start, end, cat):
+            if blocks:
+                b_start, b_end, n = blocks[-1]
+                gap = b_end + timedelta(days=1)
+                while gap < d and self.soll(gap) <= 0:
+                    gap += timedelta(days=1)
+                if gap == d:
+                    blocks[-1] = (b_start, d, n + self.absence_day(d, cat))
+                    continue
+            blocks.append((d, d, self.absence_day(d, cat)))
+        return blocks
+
 
 # --------------------------------------------------------------------------- Ausgabe
 def _h(v: float) -> str:
@@ -426,6 +451,32 @@ def _tage_liste(calc: Calculator, dates: list[date], cat: str, with_dates: bool)
             label += " (" + ", ".join(f"{d.day:02d}." for d in ds[:-1])
             label += (", " if len(ds) > 1 else "") + f"{ds[-1].day:02d}.{mo:02d}.)"
         out.append(label)
+    return out
+
+
+def _zeitraum_text(von: date, bis: date) -> str:
+    return f"{von:%d.%m.}" if von == bis else f"{von:%d.%m.} – {bis:%d.%m.}"
+
+
+def _zeitraeume(calc: Calculator, start: date, end: date, cat: str) -> list[dict]:
+    """Abwesenheits-Zeiträume mit Datum, Werktagen und Status (genommen/laufend/geplant)."""
+    out = []
+    for von, bis, n in calc.absence_blocks(start, end, cat):
+        if bis < calc.today:
+            status = "genommen"
+        elif von > calc.today:
+            status = "geplant"
+        else:
+            status = "laufend"
+        out.append({
+            "art": ABSENCE_LABELS[cat],
+            "von": von.isoformat(),
+            "bis": bis.isoformat(),
+            "zeitraum": _zeitraum_text(von, bis),
+            "tage": _t(n),
+            "stunden": _h(n * calc.cfg.hours_per_day),
+            "status": status,
+        })
     return out
 
 
@@ -646,6 +697,7 @@ def calculate(events: list[dict], cfg: CalcConfig, now: datetime) -> dict[str, d
             "urlaub_tage_bisher": _t(yr["urlaub_t"]),
             "urlaub_stunden": _h(yr_full["urlaub_h"]),
             "tage_liste": _tage_liste(c, vac_year_dates, CAT_VACATION, False),
+            "zeitraeume": _zeitraeume(c, date(today.year, 1, 1), y_end, CAT_VACATION),
             "urlaubsjahr_zeitraum": ly_zeitraum,
             "resturlaub_urlaubsjahr": f"{rest:.1f}",
             "last_calculated": stamp,
@@ -659,7 +711,8 @@ def calculate(events: list[dict], cfg: CalcConfig, now: datetime) -> dict[str, d
         "attributes": {
             "za_tage": _t(yr_full["za_t"]), "za_stunden": _h(yr_full["za_h"]),
             "za_tage_bisher": _t(yr["za_t"]),
-            "tage_liste": _tage_liste(c, za_dates, CAT_ZA, True), "last_calculated": stamp,
+            "tage_liste": _tage_liste(c, za_dates, CAT_ZA, True),
+            "zeitraeume": _zeitraeume(c, y_start, y_end, CAT_ZA), "last_calculated": stamp,
         },
     }
     care_dates = c.absence_dates(y_start, y_end, CAT_CARE)
@@ -671,6 +724,7 @@ def calculate(events: list[dict], cfg: CalcConfig, now: datetime) -> dict[str, d
             "anspruch_gesamt": _t(cfg.care_entitlement),
             "verbleibend": _t(cfg.care_entitlement - yr_full["pflege_t"]),
             "tage_liste": _tage_liste(c, care_dates, CAT_CARE, True),
+            "zeitraeume": _zeitraeume(c, y_start, y_end, CAT_CARE),
             "last_calculated": stamp,
         },
     }
@@ -680,6 +734,24 @@ def calculate(events: list[dict], cfg: CalcConfig, now: datetime) -> dict[str, d
         "attributes": {
             "krankenstand_stunden": _h(yr_full["krank_h"]),
             "tage_liste": _tage_liste(c, sick_dates, CAT_SICK, True),
+            "zeitraeume": _zeitraeume(c, y_start, y_end, CAT_SICK),
+            "last_calculated": stamp,
+        },
+    }
+    eintraege = sorted(
+        (z for cat in ABSENCES for z in _zeitraeume(c, y_start, y_end, cat)),
+        key=lambda z: (z["von"], z["art"]),
+    )
+    summen = {ABSENCE_LABELS[cat]: _t(yr_full[f"{cat}_t"]) for cat in ABSENCES}
+    out["abwesenheiten_jahr"] = {
+        "state": _t(sum(yr_full[f"{cat}_t"] for cat in ABSENCES)),
+        "attributes": {
+            "kalenderjahr": today.year,
+            "eintraege": eintraege,
+            "summen": summen,
+            "genommen_tage": _t(sum(z["tage"] for z in eintraege if z["status"] != "geplant")),
+            "geplant_tage": _t(sum(z["tage"] for z in eintraege if z["status"] == "geplant")),
+            "naechste": next((z for z in eintraege if z["status"] != "genommen"), None),
             "last_calculated": stamp,
         },
     }
