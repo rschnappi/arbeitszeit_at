@@ -154,3 +154,61 @@ def test_events_from_ics_feeds_into_calculate():
     events = calc.events_from_ics(ICS_SAMPLE)
     r = calc.calculate(events, calc.CalcConfig(), datetime(2026, 1, 13, 12, 0, tzinfo=TZ))
     assert r["urlaub_jahr"]["state"] == 1
+
+
+def test_zeitraeume_urlaub():
+    z = R["urlaub_jahr"]["attributes"]["zeitraeume"]
+    assert [(e["von"], e["bis"], e["tage"]) for e in z] == [
+        ("2026-09-21", "2026-09-23", 3),
+        ("2026-09-28", "2026-09-29", 2),
+    ]
+    assert z[0]["zeitraum"] == "21.09. – 23.09."
+    assert z[0]["stunden"] == "24.00"
+    assert z[0]["status"] == "genommen"
+    assert z[1]["status"] == "geplant"
+
+
+def test_zeitraeume_ueberbruecken_wochenende_und_feiertag():
+    events = [
+        {"start": "2026-01-05", "end": "2026-01-06", "summary": "Urlaub"},
+        {"start": "2026-01-07", "end": "2026-01-08", "summary": "Urlaub"},  # 06.01. Feiertag dazwischen
+        {"start": "2026-03-30", "end": "2026-04-01", "summary": "Zeitausgleich"},
+        {"start": "2026-04-01", "end": "2026-04-04", "summary": "ZA"},  # endet Samstag
+        {"start": "2026-05-13", "end": "2026-05-14", "summary": "ZA"},
+        {"start": "2026-05-15", "end": "2026-05-16", "summary": "ZA"},  # 14.05. Christi Himmelfahrt
+        {"start": "2026-06-01", "end": "2026-06-02", "summary": "ZA"},
+        {"start": "2026-06-03", "end": "2026-06-04", "summary": "ZA"},  # 02.06. normaler Arbeitstag
+    ]
+    r = calc.calculate(events, calc.CalcConfig(), NOW)
+    za = [(e["zeitraum"], e["tage"]) for e in r["za_jahr"]["attributes"]["zeitraeume"]]
+    assert za == [
+        ("30.03. – 03.04.", 5),
+        ("13.05. – 15.05.", 2),
+        ("01.06.", 1),
+        ("03.06.", 1),
+    ]
+    ur = r["urlaub_jahr"]["attributes"]["zeitraeume"]
+    assert [(e["zeitraum"], e["tage"]) for e in ur] == [("05.01. – 07.01.", 2)]
+
+
+def test_zeitraeume_stundenweise():
+    events = [{"start": "2026-09-15T12:00:00+02:00", "end": "2026-09-15T16:00:00+02:00", "summary": "ZA"}]
+    r = calc.calculate(events, calc.CalcConfig(), NOW)
+    z = r["za_jahr"]["attributes"]["zeitraeume"]
+    assert [(e["zeitraum"], e["tage"], e["stunden"]) for e in z] == [("15.09.", 0.5, "4.00")]
+
+
+def test_abwesenheiten_jahr():
+    a = R["abwesenheiten_jahr"]
+    assert a["state"] == 8
+    at = a["attributes"]
+    assert at["summen"] == {"Urlaub": 5, "Zeitausgleich": 1, "Pflegeurlaub": 2, "Krankenstand": 0}
+    assert [(e["art"], e["von"]) for e in at["eintraege"]] == [
+        ("Zeitausgleich", "2026-02-20"),
+        ("Pflegeurlaub", "2026-04-27"),
+        ("Urlaub", "2026-09-21"),
+        ("Urlaub", "2026-09-28"),
+    ]
+    assert at["genommen_tage"] == 6
+    assert at["geplant_tage"] == 2
+    assert at["naechste"]["von"] == "2026-09-28"
