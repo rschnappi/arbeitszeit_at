@@ -12,13 +12,18 @@ Regeln:
 - Soll = Sollstunden/Tag an Arbeitstagen ohne Feiertage (eingebaut AT und/oder Feiertags-Kalender).
 - Brutto-Überstunden = Ist + Urlaub + ZA + Pflege + Krank − Soll
 - Netto-Saldo = Brutto + Startsaldo − ZA − ausbezahlte Stunden
+- Entgangene Zuschläge (Schätzung): Überstunden je Kalenderwoche (angerechnet − Soll, nur
+  positive Wochen). Davon zuerst Sonn-/Feiertags- und Nachtstunden mit 100 %, der Rest mit 50 %.
+  Verlust = 0,5 × h50 + 1,0 × h100 (Stunden) × Stundensatz (Bruttomonatsgehalt / (Wochenstunden × 4,33)).
+- AZG-/ARG-Verstöße: > 12 h/Tag, > 60 h/Woche, Ø > 48 h über 17 Wochen, < 11 h tägliche Ruhe,
+  < 36 h Wochenruhe, > 6 h ohne 30 min Pause.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, tzinfo
+from datetime import date, datetime, time, timedelta, tzinfo
 
 MONTHS_DE = [
     "Jänner", "Februar", "März", "April", "Mai", "Juni",
@@ -211,6 +216,11 @@ class CalcConfig:
     leave_balance_date: date | None = None
     payouts: str = ""
     builtin_holidays: bool = True
+    monthly_salary: float = 0.0
+    night_window: str = "22:00-06:00"
+    sunday_holiday_100: bool = True
+    pause_check: bool = True
+    payout_entries: list[tuple[date, float]] = field(default_factory=list)  # per Service erfasst
     extra_holidays: dict[date, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -242,23 +252,62 @@ _PAYOUT_RE = re.compile(
 )
 
 
-def parse_payouts(raw: str) -> list[tuple[int | None, float]]:
-    """'Mai: 20h, August 16 Stunden' -> [(5, 20.0), (8, 16.0)]. Reine Zahl -> (None, x)."""
-    result: list[tuple[int | None, float]] = []
+_PAYOUT_DATE_RE = re.compile(
+    r"(?P<d>\d{1,2})\.(?P<m>\d{1,2})\.(?P<y>\d{2,4})?\s*:?\s*(?P<hours>\d+(?:[.,]\d+)?)\s*(?:h|std\.?|stunden)?",
+    re.IGNORECASE,
+)
+
+
+@dataclass
+class Payout:
+    hours: float
+    month: int | None = None
+    day: date | None = None  # exaktes Auszahlungsdatum (Jahr fehlt -> aktuelles Jahr)
+
+    @property
+    def label(self) -> str:
+        if self.day:
+            return f"{self.day:%d.%m.%Y}: {self.hours:g}h"
+        return f"{MONTHS_DE[self.month - 1] if self.month else 'Ohne Monat'}: {self.hours:g}h"
+
+
+def parse_payouts_detailed(raw: str, year: int | None = None) -> list[Payout]:
+    """'15.05.2026: 20h, Mai: 20h, August 16 Stunden, 12' -> Payout-Liste (Textreihenfolge)."""
+    year = year or date.today().year
     text = (raw or "").strip()
+    found: list[tuple[int, Payout]] = []
     if not text:
-        return result
-    for m in _PAYOUT_RE.finditer(text):
+        return []
+    for m in _PAYOUT_DATE_RE.finditer(text):
+        y = int(m.group("y")) if m.group("y") else year
+        if y < 100:
+            y += 2000
+        try:
+            d = date(y, int(m.group("m")), int(m.group("d")))
+        except ValueError:
+            continue
+        found.append((m.start(), Payout(float(m.group("hours").replace(",", ".")), d.month, d)))
+    rest = _PAYOUT_DATE_RE.sub(" ", text)
+    for m in _PAYOUT_RE.finditer(rest):
         word = m.group("month").lower()
         month = next((n for n, al in _MONTH_ALIASES.items() if word.startswith(al)), None)
         if month is None:
             continue
-        result.append((month, float(m.group("hours").replace(",", "."))))
-    if not result:
+        found.append((10**6 + m.start(), Payout(float(m.group("hours").replace(",", ".")), month)))
+    if not found:
         num = re.fullmatch(r"\s*(\d+(?:[.,]\d+)?)\s*(?:h|std\.?|stunden)?\s*", text, re.IGNORECASE)
         if num:
-            result.append((None, float(num.group(1).replace(",", "."))))
-    return result
+            found.append((0, Payout(float(num.group(1).replace(",", ".")))))
+    return [p for _, p in sorted(found, key=lambda t: t[0])]
+
+
+def parse_payouts(raw: str) -> list[tuple[int | None, float]]:
+    """'Mai: 20h, August 16 Stunden' -> [(5, 20.0), (8, 16.0)]. Reine Zahl -> (None, x)."""
+    return [(p.month, p.hours) for p in parse_payouts_detailed(raw)]
+
+
+def format_payout_entry(day: date, hours: float) -> str:
+    return f"{day:%d.%m.%Y}: {hours:g}h"
 
 
 # --------------------------------------------------------------------------- Kernberechnung
@@ -268,20 +317,35 @@ class DayData:
     allday: str | None = None  # Abwesenheits-Kategorie (ganztägig)
     timed_abs: dict[str, float] = field(default_factory=dict)
 
+    def merged(self) -> list[tuple[datetime, datetime]]:
+        return merge_intervals(self.work_intervals)
+
     def work_hours(self) -> float:
-        if not self.work_intervals:
-            return 0.0
-        ivs = sorted(self.work_intervals)
-        total = 0.0
-        cur_s, cur_e = ivs[0]
-        for s, e in ivs[1:]:
-            if s <= cur_e:
-                cur_e = max(cur_e, e)
-            else:
-                total += (cur_e - cur_s).total_seconds()
-                cur_s, cur_e = s, e
-        total += (cur_e - cur_s).total_seconds()
-        return total / 3600
+        return sum((e - s).total_seconds() for s, e in self.merged()) / 3600
+
+
+def merge_intervals(ivs: list[tuple[datetime, datetime]]) -> list[tuple[datetime, datetime]]:
+    out: list[tuple[datetime, datetime]] = []
+    for s, e in sorted(ivs):
+        if e <= s:
+            continue
+        if out and s <= out[-1][1]:
+            out[-1] = (out[-1][0], max(out[-1][1], e))
+        else:
+            out.append((s, e))
+    return out
+
+
+def parse_time_window(raw: str) -> tuple[time, time] | None:
+    """'22:00-06:00' -> (22:00, 06:00). Leer -> None."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    m = re.fullmatch(r"(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?", raw)
+    if not m:
+        raise ValueError(f"Ungültiges Zeitfenster (HH:MM-HH:MM): {raw!r}")
+    h1, m1, h2, m2 = (int(x or 0) for x in m.groups())
+    return time(h1 % 24, m1), time(h2 % 24, m2)
 
 
 def _parse(value: str, tz: tzinfo) -> tuple[datetime | date, bool]:
@@ -428,6 +492,150 @@ class Calculator:
                     continue
             blocks.append((d, d, self.absence_day(d, cat)))
         return blocks
+
+
+# --------------------------------------------------------------------------- Zuschläge & Verstöße
+WEEKS_PER_MONTH = 4.33  # Überstundenteiler: Wochenstunden × 4,33 (z. B. 40 h -> 1/173)
+
+V_DAY = "Tageshöchstarbeitszeit"
+V_WEEK = "Wochenhöchstarbeitszeit"
+V_AVG = "Durchschnitt 48 h (17 Wochen)"
+V_REST = "Tägliche Ruhezeit"
+V_WEEKREST = "Wochenruhe"
+V_PAUSE = "Ruhepause"
+VIOLATION_RULES = {
+    V_DAY: "§ 9 AZG: max. 12 h pro Tag",
+    V_WEEK: "§ 9 AZG: max. 60 h pro Woche",
+    V_AVG: "§ 9 Abs. 4 AZG: Ø max. 48 h in 17 Wochen",
+    V_REST: "§ 12 AZG: mind. 11 h Ruhe zwischen zwei Arbeitstagen",
+    V_WEEKREST: "§ 3/§ 4 ARG: mind. 36 h ununterbrochene Ruhe pro Woche",
+    V_PAUSE: "§ 11 AZG: ab mehr als 6 h mind. 30 min Pause",
+}
+
+
+def _overlap(ivs: list[tuple[datetime, datetime]], ws: datetime, we: datetime) -> float:
+    return sum(max(0.0, (min(e, we) - max(s, ws)).total_seconds()) for s, e in ivs) / 3600
+
+
+def _night_hours(ivs: list[tuple[datetime, datetime]], window: tuple[time, time] | None) -> float:
+    if not window or not ivs:
+        return 0.0
+    ts, te = window
+    tz = ivs[0][0].tzinfo
+    first, last = ivs[0][0].date() - timedelta(days=1), ivs[-1][1].date()
+    total, d = 0.0, first
+    while d <= last:
+        ws = datetime.combine(d, ts, tz)
+        we = datetime.combine(d + timedelta(days=1) if te <= ts else d, te, tz)
+        total += _overlap(ivs, ws, we)
+        d += timedelta(days=1)
+    return total
+
+
+def surcharge_analysis(c: "Calculator", start: date, end: date) -> dict:
+    """Überstunden je Kalenderwoche in [start, end], aufgeteilt auf 50 % / 100 %."""
+    cfg = c.cfg
+    window = parse_time_window(cfg.night_window)
+    weeks: list[dict] = []
+    ws = start - timedelta(days=start.weekday())
+    while ws <= end:
+        s, e = max(ws, start), min(ws + timedelta(days=6), end)
+        p = c.period(s, e)
+        ot = max(0.0, p["saldo"])
+        cand = 0.0
+        d = s
+        while d <= e:
+            dd = c.days.get(d)
+            if dd and c.work(d) > 0:
+                if cfg.sunday_holiday_100 and (d.weekday() == 6 or c.is_holiday(d)):
+                    cand += c.work(d)
+                else:
+                    cand += _night_hours(dd.merged(), window)
+            d += timedelta(days=1)
+        h100 = min(ot, cand)
+        h50 = ot - h100
+        weeks.append({"von": s, "bis": e, "ueberstunden": ot, "h50": h50, "h100": h100,
+                      "verlust_h": 0.5 * h50 + 1.0 * h100})
+        ws += timedelta(days=7)
+    return {"wochen": weeks,
+            "h50": sum(w["h50"] for w in weeks), "h100": sum(w["h100"] for w in weeks),
+            "ueberstunden": sum(w["ueberstunden"] for w in weeks),
+            "verlust_h": sum(w["verlust_h"] for w in weeks)}
+
+
+def violations(c: "Calculator", start: date, end: date) -> list[dict]:
+    """AZG-/ARG-Grenzen aus den Kalenderdaten in [start, end] prüfen (nur Vergangenes)."""
+    cfg = c.cfg
+    tz = c.tz
+    out: list[dict] = []
+
+    def add(d: date, art: str, wert: float, grenze: float, text: str) -> None:
+        out.append({"datum": d.isoformat(), "art": art, "wert": round(wert, 2),
+                    "grenze": grenze, "text": text, "regel": VIOLATION_RULES[art]})
+
+    all_ivs = merge_intervals([iv for d, dd in c.days.items() if start <= d <= end
+                               and not (cfg.start_date and d < cfg.start_date)
+                               for iv in dd.work_intervals])
+
+    # Tag > 12 h, Pause
+    d = start
+    while d <= end:
+        dd = c.days.get(d)
+        if dd and c.work(d) > 0:
+            h = c.work(d)
+            if h > 12:
+                add(d, V_DAY, h, 12, f"{d:%d.%m.}: {h:.2f} h gearbeitet")
+            if cfg.pause_check:
+                blk_s = blk_work = None
+                for s, e in dd.merged():
+                    if blk_s is not None and (s - blk_end).total_seconds() < 1800:
+                        blk_work += (e - s).total_seconds() / 3600
+                    else:
+                        blk_s, blk_work = s, (e - s).total_seconds() / 3600
+                    blk_end = e
+                    if blk_work > 6:
+                        add(d, V_PAUSE, blk_work, 6,
+                            f"{d:%d.%m.}: {blk_work:.2f} h ab {blk_s:%H:%M} ohne 30 min Pause")
+                        blk_s = None
+                        break
+        d += timedelta(days=1)
+
+    # Tägliche Ruhezeit < 11 h (Lücken zwischen Arbeitsblöcken an verschiedenen Tagen)
+    for (s1, e1), (s2, e2) in zip(all_ivs, all_ivs[1:]):
+        gap = (s2 - e1).total_seconds() / 3600
+        if s2.date() != e1.date() and gap < 11:
+            add(s2.date(), V_REST, gap, 11,
+                f"{e1:%d.%m. %H:%M} → {s2:%d.%m. %H:%M}: nur {gap:.2f} h Ruhe")
+
+    # Woche > 60 h, Wochenruhe < 36 h, Ø 48 h / 17 Wochen
+    week_hours: list[tuple[date, float]] = []
+    ws = start - timedelta(days=start.weekday())
+    while ws <= end:
+        we = ws + timedelta(days=6)
+        h = sum(c.work(x) for x in (ws + timedelta(days=i) for i in range(7)) if start <= x <= end)
+        kw = f"KW {ws.isocalendar().week}"
+        if h > 60:
+            add(ws, V_WEEK, h, 60, f"{kw}: {h:.2f} h gearbeitet")
+        complete = ws >= start and we < c.today
+        if complete:
+            week_hours.append((ws, h))
+            w0 = datetime.combine(ws, time.min, tz)
+            w1 = datetime.combine(we + timedelta(days=1), time.min, tz)
+            inside = [(max(s, w0), min(e, w1)) for s, e in all_ivs if e > w0 and s < w1]
+            if inside:
+                points = [w0] + [t for iv in inside for t in iv] + [w1]
+                best = max((points[i + 1] - points[i]).total_seconds() / 3600
+                           for i in range(0, len(points), 2))
+                if best < 36:
+                    add(ws, V_WEEKREST, best, 36, f"{kw}: längste Ruhe nur {best:.2f} h")
+        ws += timedelta(days=7)
+    for i in range(16, len(week_hours)):
+        avg = sum(h for _, h in week_hours[i - 16:i + 1]) / 17
+        if avg > 48:
+            add(week_hours[i][0], V_AVG, avg, 48,
+                f"17 Wochen bis KW {week_hours[i][0].isocalendar().week}: Ø {avg:.2f} h")
+    out.sort(key=lambda v: (v["datum"], v["art"]))
+    return out
 
 
 # --------------------------------------------------------------------------- Ausgabe
@@ -611,9 +819,13 @@ def calculate(events: list[dict], cfg: CalcConfig, now: datetime) -> dict[str, d
         parts.append(f"Saldo {p['saldo']:+.1f}h")
         monats_uebersicht.append(f"{MONTHS_DE[month - 1]} {today.year}: " + " | ".join(parts))
 
-    payouts = [(m, h) for m, h in parse_payouts(cfg.payouts)]
-    payout_h = sum(h for _, h in payouts)
-    payout_list = [f"{MONTHS_DE[m - 1] if m else 'Ohne Monat'}: {h:g}h" for m, h in payouts]
+    payouts_all = parse_payouts_detailed(cfg.payouts, today.year) + [
+        Payout(h, d.month, d) for d, h in sorted(cfg.payout_entries)]
+    # Datierte Auszahlungen zählen nur im eigenen Kalenderjahr und erst ab dem Auszahlungstag
+    payouts = [p for p in payouts_all if p.day is None or (p.day.year == today.year and p.day <= today)]
+    payouts_planned = [p for p in payouts_all if p.day and p.day.year == today.year and p.day > today]
+    payout_h = sum(p.hours for p in payouts)
+    payout_list = [p.label for p in payouts]
     netto = yr["saldo"] + cfg.start_balance - yr["za_h"] - payout_h
 
     out["uberstunden_jahr"] = {
@@ -759,7 +971,71 @@ def calculate(events: list[dict], cfg: CalcConfig, now: datetime) -> dict[str, d
         "state": round(payout_h, 2),
         "attributes": {
             "stunden": _h(payout_h), "tage": _h(payout_h / cfg.hours_per_day),
-            "auszahlungen_liste": payout_list, "eingabe_text": cfg.payouts,
+            "auszahlungen_liste": payout_list,
+            "auszahlungen": [{"datum": p.day.isoformat() if p.day else None,
+                              "monat": MONTHS_DE[p.month - 1] if p.month else None,
+                              "stunden": _h(p.hours)} for p in payouts],
+            "geplant_liste": [p.label for p in payouts_planned],
+            "letzte_auszahlung": next((p.day.isoformat() for p in sorted(
+                (p for p in payouts if p.day), key=lambda p: p.day, reverse=True)), None),
+            "eingabe_text": cfg.payouts,
+            "last_calculated": stamp,
+        },
+    }
+    # ---- Entgangene Zuschläge & Verstöße (Kalenderjahr bis heute)
+    sa = surcharge_analysis(c, y_start, today)
+    rate = cfg.monthly_salary / (cfg.hours_per_day * len(cfg.workdays) * WEEKS_PER_MONTH) \
+        if cfg.monthly_salary > 0 and cfg.workdays else 0.0
+    brutto_pos = max(0.0, yr["saldo"])
+    faktor = min(1.0, brutto_pos / sa["ueberstunden"]) if sa["ueberstunden"] > 0 else 0.0
+    monate: dict[int, dict[str, float]] = {}
+    for wk_ in sa["wochen"]:
+        m = monate.setdefault(wk_["bis"].month, {"ue": 0.0, "h50": 0.0, "h100": 0.0, "v": 0.0})
+        m["ue"] += wk_["ueberstunden"]; m["h50"] += wk_["h50"]; m["h100"] += wk_["h100"]
+        m["v"] += wk_["verlust_h"]
+    zuschlag_attrs = {
+        "zeitraum": f"{y_start:%d.%m.%Y} - {today:%d.%m.%Y}",
+        "ueberstunden_wochenbasis": _h(sa["ueberstunden"]),
+        "ueberstunden_50_prozent": _h(sa["h50"]),
+        "ueberstunden_100_prozent": _h(sa["h100"]),
+        "entgangen_stunden": _h(sa["verlust_h"]),
+        "entgangen_stunden_konservativ": _h(sa["verlust_h"] * faktor),
+        "stundensatz": f"{rate:.2f}",
+        "ueberstundenteiler": _h(cfg.hours_per_day * len(cfg.workdays) * WEEKS_PER_MONTH),
+        "bruttomonatsgehalt": f"{cfg.monthly_salary:.2f}",
+        "entgangen_eur": f"{sa['verlust_h'] * rate:.2f}",
+        "entgangen_eur_konservativ": f"{sa['verlust_h'] * faktor * rate:.2f}",
+        "wert_ueberstunden_mit_zuschlag_eur": f"{(sa['ueberstunden'] + sa['verlust_h']) * rate:.2f}",
+        "nachtfenster": cfg.night_window or "aus",
+        "sonn_feiertag_100": cfg.sunday_holiday_100,
+        "monats_uebersicht": [
+            f"{MONTHS_DE[mo_ - 1]}: Überstunden {v['ue']:.1f}h | 50% {v['h50']:.1f}h | 100% {v['h100']:.1f}h"
+            f" | entgangen {v['v']:.1f}h" + (f" ≈ {v['v'] * rate:.0f} €" if rate else "")
+            for mo_, v in sorted(monate.items())],
+        "wochen": [
+            {"kw": f"KW {wk_['von'].isocalendar().week}", "von": wk_["von"].isoformat(),
+             "bis": wk_["bis"].isoformat(), "ueberstunden": _h(wk_["ueberstunden"]),
+             "h50": _h(wk_["h50"]), "h100": _h(wk_["h100"]), "entgangen_h": _h(wk_["verlust_h"]),
+             "entgangen_eur": f"{wk_['verlust_h'] * rate:.2f}"}
+            for wk_ in sa["wochen"] if wk_["ueberstunden"] > 0],
+        "hinweis": "Schätzung: Überstunden je Kalenderwoche, Minus-Wochen nicht gegengerechnet; "
+                   "konservativ = auf positives Jahres-Brutto gedeckelt. KV-Regeln können abweichen.",
+        "last_calculated": stamp,
+    }
+    out["zuschlaege_entgangen_stunden"] = {"state": round(sa["verlust_h"], 2), "attributes": zuschlag_attrs}
+    out["zuschlaege_entgangen_eur"] = {"state": round(sa["verlust_h"] * rate, 2), "attributes": zuschlag_attrs}
+
+    viol = violations(c, y_start, today)
+    summen_v = {art: sum(1 for v in viol if v["art"] == art) for art in VIOLATION_RULES}
+    out["azg_verstoesse_jahr"] = {
+        "state": len(viol),
+        "attributes": {
+            "kalenderjahr": today.year,
+            "summen": summen_v,
+            "regeln": VIOLATION_RULES,
+            "eintraege": viol,
+            "letzter": viol[-1] if viol else None,
+            "monat_aktuell": sum(1 for v in viol if v["datum"][:7] == today.strftime("%Y-%m")),
             "last_calculated": stamp,
         },
     }

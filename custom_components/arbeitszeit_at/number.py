@@ -11,7 +11,7 @@ except ImportError:  # HA < 2025.2
 from homeassistant.util import dt as dt_util
 
 from . import ArbeitszeitConfigEntry
-from .const import CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE, CONF_START_BALANCE
+from .const import CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE, CONF_MONTHLY_SALARY, CONF_START_BALANCE
 from .coordinator import merged_config
 from .entity import ArbeitszeitEntity
 
@@ -25,6 +25,8 @@ async def async_setup_entry(
                      "h", -1000, 1000, 0.25, "mdi:clock-start"),
         OptionNumber(c, "resturlaub_stand", "Resturlaub Stand (Lohnzettel)", CONF_LEAVE_BALANCE,
                      "Tage", 0, 365, 0.5, "mdi:palm-tree", stamp_key=CONF_LEAVE_BALANCE_DATE),
+        OptionNumber(c, "bruttomonatsgehalt", "Bruttomonatsgehalt (für Zuschlagsschätzung)", CONF_MONTHLY_SALARY,
+                     "€", 0, 100000, 1, "mdi:cash"),
     ])
 
 

@@ -24,14 +24,20 @@ CONF_KW_CARE = "keywords_care"
 CONF_KW_SICK = "keywords_sick"
 CONF_KW_IGNORE = "keywords_ignore"
 CONF_SCAN_INTERVAL = "scan_interval"
+CONF_NIGHT_WINDOW = "night_window"
+CONF_SUNDAY_HOLIDAY_100 = "sunday_holiday_100"
+CONF_PAUSE_CHECK = "pause_check"
 
 # Dynamische Werte (Änderung => nur Refresh; per Number/Text-Entity editierbar)
 CONF_START_BALANCE = "start_balance"
 CONF_LEAVE_BALANCE = "leave_balance"
 CONF_LEAVE_BALANCE_DATE = "leave_balance_date"
 CONF_PAYOUTS = "payouts"
+CONF_PAYOUT_ENTRIES = "payout_entries"  # [{"datum": "YYYY-MM-DD", "stunden": float}] – per Service
+CONF_MONTHLY_SALARY = "monthly_salary"
 
-DYNAMIC_KEYS = {CONF_START_BALANCE, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE, CONF_PAYOUTS}
+DYNAMIC_KEYS = {CONF_START_BALANCE, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE, CONF_PAYOUTS,
+                CONF_PAYOUT_ENTRIES, CONF_MONTHLY_SALARY}
 
 DEFAULTS = {
     CONF_WEEKLY_HOURS: 40.0,
@@ -50,6 +56,13 @@ DEFAULTS = {
     CONF_START_BALANCE: 0.0,
     CONF_LEAVE_BALANCE: 0.0,
     CONF_PAYOUTS: "",
+    CONF_PAYOUT_ENTRIES: [],
+    CONF_MONTHLY_SALARY: 0.0,
+    CONF_NIGHT_WINDOW: "22:00-06:00",
+    CONF_SUNDAY_HOLIDAY_100: True,
+    CONF_PAUSE_CHECK: True,
 }
 
 SERVICE_REFRESH = "refresh"
+SERVICE_ADD_PAYOUT = "auszahlung_erfassen"
+SERVICE_REMOVE_PAYOUT = "auszahlung_entfernen"

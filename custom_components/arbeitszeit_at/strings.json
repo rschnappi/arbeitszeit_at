@@ -24,7 +24,11 @@
           "keywords_care": "Schlüsselwörter Pflegeurlaub",
           "keywords_sick": "Schlüsselwörter Krankenstand",
           "keywords_ignore": "Termine ignorieren (Schlüsselwörter)",
-          "scan_interval": "Aktualisierungsintervall (Minuten)"
+          "scan_interval": "Aktualisierungsintervall (Minuten)",
+          "monthly_salary": "Gross monthly salary (€, for surcharge estimate)",
+          "night_window": "Night time for 100 % surcharge (HH:MM-HH:MM)",
+          "sunday_holiday_100": "Rate Sunday/holiday work at 100 %",
+          "pause_check": "Check rest breaks (> 6 h without 30 min break)"
         },
         "data_description": {
           "calendar_entity": "Zeitgebundene Termine = Arbeitszeit, ganztägige Termine mit Schlüsselwort = Abwesenheit.",
@@ -32,13 +36,16 @@
           "start_date": "Vor diesem Datum wird weder Soll noch Ist gezählt.",
           "leave_year_start": "z. B. 16.08. oder 01.01.",
           "leave_balance_date": "Urlaubstage nach diesem Datum werden abgezogen.",
-          "payouts": "z. B. „Mai: 20h, August 16 Stunden“",
+          "payouts": "e.g. \"15.05.2026: 20h, May: 20h\" – exact date or month. More payouts via service arbeitszeit_at.auszahlung_erfassen.",
           "keywords_vacation": "Kommagetrennt, Groß-/Kleinschreibung egal",
           "keywords_ignore": "z. B. „Privat, Geburtstag“ – zählen weder als Arbeit noch Abwesenheit",
           "holiday_calendar_entity": "Ganztägige Termine in diesem Kalender gelten als arbeitsfreie Feiertage.",
           "holiday_filter": "Kommagetrennt; ein Begriff muss in Titel oder Beschreibung vorkommen. Beim Google-Kalender „Feiertage in Österreich“ blendet „Gesetzlicher Feiertag“ die Gedenktage aus. Leer = alle ganztägigen Termine.",
           "builtin_holidays": "Wird mit dem Feiertags-Kalender kombiniert. Empfohlen, da Google-Feiertagskalender oft nur einen begrenzten Zeitraum liefern.",
-          "weekly_hours": "Frei eintragbar, z. B. 40, 38,5, 20 oder 16 - wird gleichmäßig auf die gewählten Arbeitstage aufgeteilt."
+          "weekly_hours": "Frei eintragbar, z. B. 40, 38,5, 20 oder 16 - wird gleichmäßig auf die gewählten Arbeitstage aufgeteilt.",
+          "monthly_salary": "0 = hours only. Hourly rate = salary / (weekly hours × 4.33).",
+          "night_window": "e.g. 22:00-06:00. Empty = no night rule.",
+          "pause_check": "Work events with gaps < 30 min count as continuous."
         }
       }
     },
@@ -46,7 +53,8 @@
       "invalid_day_month": "Bitte als TT.MM. angeben, z. B. 16.08.",
       "no_workdays": "Mindestens einen Arbeitstag wählen.",
       "no_holiday_source": "Feiertags-Kalender wählen oder eingebaute Feiertage aktivieren.",
-      "same_calendar": "Feiertags-Kalender muss sich vom Arbeitszeit-Kalender unterscheiden."
+      "same_calendar": "Feiertags-Kalender muss sich vom Arbeitszeit-Kalender unterscheiden.",
+      "invalid_time_window": "Use HH:MM-HH:MM, e.g. 22:00-06:00"
     },
     "abort": {
       "already_configured": "Dieser Kalender ist bereits eingerichtet."
@@ -77,7 +85,11 @@
           "keywords_care": "Schlüsselwörter Pflegeurlaub",
           "keywords_sick": "Schlüsselwörter Krankenstand",
           "keywords_ignore": "Termine ignorieren (Schlüsselwörter)",
-          "scan_interval": "Aktualisierungsintervall (Minuten)"
+          "scan_interval": "Aktualisierungsintervall (Minuten)",
+          "monthly_salary": "Gross monthly salary (€, for surcharge estimate)",
+          "night_window": "Night time for 100 % surcharge (HH:MM-HH:MM)",
+          "sunday_holiday_100": "Rate Sunday/holiday work at 100 %",
+          "pause_check": "Check rest breaks (> 6 h without 30 min break)"
         },
         "data_description": {
           "calendar_entity": "Zeitgebundene Termine = Arbeitszeit, ganztägige Termine mit Schlüsselwort = Abwesenheit.",
@@ -85,13 +97,16 @@
           "start_date": "Vor diesem Datum wird weder Soll noch Ist gezählt.",
           "leave_year_start": "z. B. 16.08. oder 01.01.",
           "leave_balance_date": "Urlaubstage nach diesem Datum werden abgezogen.",
-          "payouts": "z. B. „Mai: 20h, August 16 Stunden“",
+          "payouts": "e.g. \"15.05.2026: 20h, May: 20h\" – exact date or month. More payouts via service arbeitszeit_at.auszahlung_erfassen.",
           "keywords_vacation": "Kommagetrennt, Groß-/Kleinschreibung egal",
           "keywords_ignore": "z. B. „Privat, Geburtstag“ – zählen weder als Arbeit noch Abwesenheit",
           "holiday_calendar_entity": "Ganztägige Termine in diesem Kalender gelten als arbeitsfreie Feiertage.",
           "holiday_filter": "Kommagetrennt; ein Begriff muss in Titel oder Beschreibung vorkommen. Beim Google-Kalender „Feiertage in Österreich“ blendet „Gesetzlicher Feiertag“ die Gedenktage aus. Leer = alle ganztägigen Termine.",
           "builtin_holidays": "Wird mit dem Feiertags-Kalender kombiniert. Empfohlen, da Google-Feiertagskalender oft nur einen begrenzten Zeitraum liefern.",
-          "weekly_hours": "Frei eintragbar, z. B. 40, 38,5, 20 oder 16 - wird gleichmäßig auf die gewählten Arbeitstage aufgeteilt."
+          "weekly_hours": "Frei eintragbar, z. B. 40, 38,5, 20 oder 16 - wird gleichmäßig auf die gewählten Arbeitstage aufgeteilt.",
+          "monthly_salary": "0 = hours only. Hourly rate = salary / (weekly hours × 4.33).",
+          "night_window": "e.g. 22:00-06:00. Empty = no night rule.",
+          "pause_check": "Work events with gaps < 30 min count as continuous."
         }
       }
     },
@@ -99,13 +114,46 @@
       "invalid_day_month": "Bitte als TT.MM. angeben, z. B. 16.08.",
       "no_workdays": "Mindestens einen Arbeitstag wählen.",
       "no_holiday_source": "Feiertags-Kalender wählen oder eingebaute Feiertage aktivieren.",
-      "same_calendar": "Feiertags-Kalender muss sich vom Arbeitszeit-Kalender unterscheiden."
+      "same_calendar": "Feiertags-Kalender muss sich vom Arbeitszeit-Kalender unterscheiden.",
+      "invalid_time_window": "Use HH:MM-HH:MM, e.g. 22:00-06:00"
     }
   },
   "services": {
     "refresh": {
       "name": "Neu berechnen",
       "description": "Kalender sofort neu einlesen und alle Werte neu berechnen."
+    },
+    "auszahlung_erfassen": {
+      "name": "Record payout",
+      "description": "Record paid-out overtime hours with a date (same date replaces the value).",
+      "fields": {
+        "datum": {
+          "name": "Date",
+          "description": "Payout date"
+        },
+        "stunden": {
+          "name": "Hours",
+          "description": "Paid-out hours"
+        },
+        "config_entry_id": {
+          "name": "Entry",
+          "description": "Only needed with several calendars"
+        }
+      }
+    },
+    "auszahlung_entfernen": {
+      "name": "Remove payout",
+      "description": "Delete a payout recorded via service for a date.",
+      "fields": {
+        "datum": {
+          "name": "Date",
+          "description": "Payout date"
+        },
+        "config_entry_id": {
+          "name": "Entry",
+          "description": "Only needed with several calendars"
+        }
+      }
     }
   }
 }

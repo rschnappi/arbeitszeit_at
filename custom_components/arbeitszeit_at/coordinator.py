@@ -21,6 +21,7 @@ from .const import (
     CONF_KW_SICK, CONF_KW_VACATION, CONF_KW_ZA, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE,
     CONF_LEAVE_YEAR_START, CONF_PAYOUTS, CONF_SCAN_INTERVAL, CONF_START_BALANCE, CONF_START_DATE,
     CONF_WEEKLY_HOURS, CONF_WORKDAYS, CONF_XMAS_EVE_FREE, DEFAULTS, DOMAIN,
+    CONF_MONTHLY_SALARY, CONF_NIGHT_WINDOW, CONF_PAUSE_CHECK, CONF_PAYOUT_ENTRIES, CONF_SUNDAY_HOLIDAY_100,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,7 +64,22 @@ def build_calc_config(conf: dict[str, Any]) -> CalcConfig:
         leave_balance_date=_to_date(conf.get(CONF_LEAVE_BALANCE_DATE)),
         payouts=conf.get(CONF_PAYOUTS) or "",
         builtin_holidays=bool(conf.get(CONF_BUILTIN_HOLIDAYS, True)),
+        monthly_salary=float(conf.get(CONF_MONTHLY_SALARY) or 0.0),
+        night_window=conf.get(CONF_NIGHT_WINDOW) or "",
+        sunday_holiday_100=bool(conf.get(CONF_SUNDAY_HOLIDAY_100, True)),
+        pause_check=bool(conf.get(CONF_PAUSE_CHECK, True)),
+        payout_entries=payout_entries(conf),
     )
+
+
+def payout_entries(conf: dict[str, Any]) -> list[tuple[date, float]]:
+    out = []
+    for e in conf.get(CONF_PAYOUT_ENTRIES) or []:
+        try:
+            out.append((date.fromisoformat(str(e["datum"])), float(e["stunden"])))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
 
 
 class ArbeitszeitCoordinator(DataUpdateCoordinator[dict[str, dict]]):

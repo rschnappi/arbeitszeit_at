@@ -24,7 +24,17 @@
           "keywords_care": "Keywords care leave",
           "keywords_sick": "Keywords sick leave",
           "keywords_ignore": "Ignore events (keywords)",
-          "scan_interval": "Update interval (minutes)"
+          "scan_interval": "Update interval (minutes)",
+          "monthly_salary": "Gross monthly salary (€, for surcharge estimate)",
+          "night_window": "Night time for 100 % surcharge (HH:MM-HH:MM)",
+          "sunday_holiday_100": "Rate Sunday/holiday work at 100 %",
+          "pause_check": "Check rest breaks (> 6 h without 30 min break)"
+        },
+        "data_description": {
+          "monthly_salary": "0 = hours only. Hourly rate = salary / (weekly hours × 4.33).",
+          "night_window": "e.g. 22:00-06:00. Empty = no night rule.",
+          "pause_check": "Work events with gaps < 30 min count as continuous.",
+          "payouts": "e.g. \"15.05.2026: 20h, May: 20h\" – exact date or month. More payouts via service arbeitszeit_at.auszahlung_erfassen."
         }
       }
     },
@@ -32,7 +42,8 @@
       "invalid_day_month": "Use DD.MM., e.g. 16.08.",
       "no_workdays": "Select at least one working day.",
       "no_holiday_source": "Select a holiday calendar or enable built-in holidays.",
-      "same_calendar": "Holiday calendar must differ from the working time calendar."
+      "same_calendar": "Holiday calendar must differ from the working time calendar.",
+      "invalid_time_window": "Use HH:MM-HH:MM, e.g. 22:00-06:00"
     },
     "abort": {
       "already_configured": "This calendar is already configured."
@@ -63,7 +74,17 @@
           "keywords_care": "Keywords care leave",
           "keywords_sick": "Keywords sick leave",
           "keywords_ignore": "Ignore events (keywords)",
-          "scan_interval": "Update interval (minutes)"
+          "scan_interval": "Update interval (minutes)",
+          "monthly_salary": "Gross monthly salary (€, for surcharge estimate)",
+          "night_window": "Night time for 100 % surcharge (HH:MM-HH:MM)",
+          "sunday_holiday_100": "Rate Sunday/holiday work at 100 %",
+          "pause_check": "Check rest breaks (> 6 h without 30 min break)"
+        },
+        "data_description": {
+          "monthly_salary": "0 = hours only. Hourly rate = salary / (weekly hours × 4.33).",
+          "night_window": "e.g. 22:00-06:00. Empty = no night rule.",
+          "pause_check": "Work events with gaps < 30 min count as continuous.",
+          "payouts": "e.g. \"15.05.2026: 20h, May: 20h\" – exact date or month. More payouts via service arbeitszeit_at.auszahlung_erfassen."
         }
       }
     },
@@ -71,13 +92,46 @@
       "invalid_day_month": "Use DD.MM., e.g. 16.08.",
       "no_workdays": "Select at least one working day.",
       "no_holiday_source": "Select a holiday calendar or enable built-in holidays.",
-      "same_calendar": "Holiday calendar must differ from the working time calendar."
+      "same_calendar": "Holiday calendar must differ from the working time calendar.",
+      "invalid_time_window": "Use HH:MM-HH:MM, e.g. 22:00-06:00"
     }
   },
   "services": {
     "refresh": {
       "name": "Recalculate",
       "description": "Re-read the calendar and recalculate all values."
+    },
+    "auszahlung_erfassen": {
+      "name": "Record payout",
+      "description": "Record paid-out overtime hours with a date (same date replaces the value).",
+      "fields": {
+        "datum": {
+          "name": "Date",
+          "description": "Payout date"
+        },
+        "stunden": {
+          "name": "Hours",
+          "description": "Paid-out hours"
+        },
+        "config_entry_id": {
+          "name": "Entry",
+          "description": "Only needed with several calendars"
+        }
+      }
+    },
+    "auszahlung_entfernen": {
+      "name": "Remove payout",
+      "description": "Delete a payout recorded via service for a date.",
+      "fields": {
+        "datum": {
+          "name": "Date",
+          "description": "Payout date"
+        },
+        "config_entry_id": {
+          "name": "Entry",
+          "description": "Only needed with several calendars"
+        }
+      }
     }
   }
 }

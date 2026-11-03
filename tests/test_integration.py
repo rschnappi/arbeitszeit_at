@@ -83,6 +83,27 @@ async def test_flow_and_sensors(hass: HomeAssistant, frozen) -> None:
         assert hass.states.get("sensor.za_ausbezahlt_jahr").state == "20.0"
         assert hass.states.get("text.ausbezahlter_za").state == "Mai: 20h"
 
+        # Auszahlung mit Datum per Service -> nur Refresh
+        await hass.services.async_call(DOMAIN, "auszahlung_erfassen",
+            {"datum": "2026-06-15", "stunden": 8}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.runtime_data is coord
+        await coord.async_refresh()
+        await hass.async_block_till_done()
+        st = hass.states.get("sensor.za_ausbezahlt_jahr")
+        assert st.state == "28.0"
+        assert "15.06.2026: 8h" in st.attributes["auszahlungen_liste"]
+        await hass.services.async_call(DOMAIN, "auszahlung_entfernen", {"datum": "2026-06-15"}, blocking=True)
+        await hass.async_block_till_done()
+        await coord.async_refresh()
+        await hass.async_block_till_done()
+        assert hass.states.get("sensor.za_ausbezahlt_jahr").state == "20.0"
+
+        assert hass.states.get("sensor.zuschlaege_entgangen_stunden") is not None
+        assert hass.states.get("sensor.zuschlaege_entgangen_eur").state == "0.0"
+        assert hass.states.get("sensor.azg_verstoesse_jahr") is not None
+        assert hass.states.get("number.bruttomonatsgehalt").state == "0.0"
+
 
 async def test_options_flow(hass: HomeAssistant, frozen) -> None:
     # Legacy-Entry mit dem alten hours_per_day-Feld -> prüft die Migration auf weekly_hours beim Setup.

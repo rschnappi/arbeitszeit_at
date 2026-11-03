@@ -212,3 +212,72 @@ def test_abwesenheiten_jahr():
     assert at["genommen_tage"] == 6
     assert at["geplant_tage"] == 2
     assert at["naechste"]["von"] == "2026-09-28"
+
+
+# --------------------------------------------------------------------------- Zuschläge & Verstöße
+def _ev(d, s, e, summary="Arbeit"):
+    return {"start": f"{d}T{s}:00+01:00", "end": f"{d}T{e}:00+01:00", "summary": summary}
+
+
+TZ1 = timezone(timedelta(hours=1))
+# KW 45/2026 (02.–08.11.): Mo–Fr 10 h, So 4 h -> 14 h Überstunden, davon 4 h Sonntag + 1 h Nacht
+ZEVENTS = [_ev(f"2026-11-0{d}", "07:00", "12:00") for d in (2, 3, 4, 5)] + \
+          [_ev(f"2026-11-0{d}", "12:30", "17:30") for d in (2, 3, 4, 5)] + [
+    _ev("2026-11-06", "13:00", "23:00"),   # 1 h nach 22:00 (Nacht)
+    _ev("2026-11-08", "08:00", "12:00"),   # Sonntag
+]
+ZNOW = datetime(2026, 11, 9, 8, 0, tzinfo=TZ1)
+
+
+def test_surcharges_hours_and_eur():
+    cfg = calc.CalcConfig(monthly_salary=3464, start_date=date(2026, 11, 2))
+    r = calc.calculate(ZEVENTS, cfg, ZNOW)
+    a = r["zuschlaege_entgangen_stunden"]["attributes"]
+    assert a["ueberstunden_wochenbasis"] == "14.00"
+    assert a["ueberstunden_100_prozent"] == "5.00"
+    assert a["ueberstunden_50_prozent"] == "9.00"
+    assert r["zuschlaege_entgangen_stunden"]["state"] == 9.5  # 0,5·9 + 1·5
+    assert a["ueberstundenteiler"] == "173.20"
+    assert r["zuschlaege_entgangen_eur"]["state"] == round(9.5 * 3464 / 173.2, 2)
+
+
+def test_surcharges_no_night_no_sunday():
+    cfg = calc.CalcConfig(start_date=date(2026, 11, 2), night_window="", sunday_holiday_100=False)
+    a = calc.calculate(ZEVENTS, cfg, ZNOW)["zuschlaege_entgangen_stunden"]
+    assert a["state"] == 7.0
+    assert a["attributes"]["entgangen_eur"] == "0.00"
+
+
+def test_violations():
+    evs = [
+        _ev("2026-11-02", "06:00", "19:00"),              # 13 h, keine Pause
+        _ev("2026-11-03", "02:00", "10:00"),              # nur 7 h Ruhe
+        _ev("2026-11-07", "20:00", "23:30"), _ev("2026-11-08", "11:00", "12:00"),
+    ]
+    cfg = calc.CalcConfig(start_date=date(2026, 11, 2))
+    v = calc.calculate(evs, cfg, ZNOW)["azg_verstoesse_jahr"]
+    s = v["attributes"]["summen"]
+    assert s[calc.V_DAY] == 1
+    assert s[calc.V_PAUSE] == 2
+    assert s[calc.V_REST] == 1
+    assert s[calc.V_WEEKREST] == 0   # Mi 10:00 – Sa 20:00 frei
+    assert s[calc.V_WEEK] == 0
+    assert v["state"] == 4
+
+
+def test_weekly_rest_violation():
+    evs = [_ev(f"2026-11-0{d}", "08:00", "16:00") for d in range(2, 9)] + \
+          [_ev(f"2026-11-0{d}", "16:30", "18:00") for d in range(2, 9)]
+    cfg = calc.CalcConfig(start_date=date(2026, 11, 2), pause_check=False)
+    s = calc.calculate(evs, cfg, ZNOW)["azg_verstoesse_jahr"]["attributes"]["summen"]
+    assert s[calc.V_WEEKREST] == 1
+
+
+def test_dated_payouts():
+    cfg = calc.CalcConfig(payouts="15.05.2026: 20h, Aug 16h, 30.12.2026: 5h",
+                          payout_entries=[(date(2026, 3, 31), 4.0), (date(2025, 12, 31), 99.0)])
+    a = calc.calculate([], cfg, ZNOW)["za_ausbezahlt_jahr"]
+    assert a["state"] == 40.0
+    assert a["attributes"]["geplant_liste"] == ["30.12.2026: 5h"]
+    assert a["attributes"]["letzte_auszahlung"] == "2026-05-15"
+    assert "15.05.2026: 20h" in a["attributes"]["auszahlungen_liste"]
