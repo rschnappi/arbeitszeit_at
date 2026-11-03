@@ -10,12 +10,13 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.core import callback
 from homeassistant.helpers import selector as sel
 
-from .calc import parse_day_month
+from .calc import parse_day_month, parse_time_window
 from .const import (
     CONF_BUILTIN_HOLIDAYS, CONF_CALENDAR, CONF_CARE_ENTITLEMENT, CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_ICS_URL, CONF_KW_CARE, CONF_KW_IGNORE,
     CONF_KW_SICK, CONF_KW_VACATION, CONF_KW_ZA, CONF_LEAVE_BALANCE, CONF_LEAVE_BALANCE_DATE,
     CONF_LEAVE_YEAR_START, CONF_PAYOUTS, CONF_SCAN_INTERVAL, CONF_START_BALANCE, CONF_START_DATE,
     CONF_WEEKLY_HOURS, CONF_WORKDAYS, CONF_XMAS_EVE_FREE, DEFAULTS, DOMAIN,
+    CONF_MONTHLY_SALARY, CONF_NIGHT_WINDOW, CONF_PAUSE_CHECK, CONF_PAYOUT_ENTRIES, CONF_SUNDAY_HOLIDAY_100,
 )
 from .coordinator import merged_config
 
@@ -54,6 +55,10 @@ def _schema(d: dict[str, Any]) -> vol.Schema:
         vol.Required(CONF_LEAVE_BALANCE, default=d.get(CONF_LEAVE_BALANCE, 0.0)): _num(0, 365, 0.5, "Tage"),
         opt(CONF_LEAVE_BALANCE_DATE): sel.DateSelector(),
         opt(CONF_PAYOUTS): sel.TextSelector(),
+        vol.Required(CONF_MONTHLY_SALARY, default=d.get(CONF_MONTHLY_SALARY, 0.0)): _num(0, 100000, 1, "€"),
+        opt(CONF_NIGHT_WINDOW): sel.TextSelector(),
+        vol.Required(CONF_SUNDAY_HOLIDAY_100, default=d.get(CONF_SUNDAY_HOLIDAY_100, True)): sel.BooleanSelector(),
+        vol.Required(CONF_PAUSE_CHECK, default=d.get(CONF_PAUSE_CHECK, True)): sel.BooleanSelector(),
         vol.Required(CONF_KW_VACATION, default=d.get(CONF_KW_VACATION, DEFAULTS[CONF_KW_VACATION])): sel.TextSelector(),
         vol.Required(CONF_KW_ZA, default=d.get(CONF_KW_ZA, DEFAULTS[CONF_KW_ZA])): sel.TextSelector(),
         vol.Required(CONF_KW_CARE, default=d.get(CONF_KW_CARE, DEFAULTS[CONF_KW_CARE])): sel.TextSelector(),
@@ -73,6 +78,10 @@ def _validate(user_input: dict[str, Any]) -> dict[str, str]:
         errors[CONF_BUILTIN_HOLIDAYS] = "no_holiday_source"
     if user_input.get(CONF_HOLIDAY_CALENDAR) and user_input.get(CONF_HOLIDAY_CALENDAR) == user_input.get(CONF_CALENDAR):
         errors[CONF_HOLIDAY_CALENDAR] = "same_calendar"
+    try:
+        parse_time_window(user_input.get(CONF_NIGHT_WINDOW) or "")
+    except ValueError:
+        errors[CONF_NIGHT_WINDOW] = "invalid_time_window"
     if not user_input.get(CONF_WORKDAYS):
         errors[CONF_WORKDAYS] = "no_workdays"
     return errors
@@ -108,8 +117,12 @@ class ArbeitszeitOptionsFlow(OptionsFlow):
             if not errors:
                 # leere optionale Felder explizit leeren
                 for key in (CONF_START_DATE, CONF_LEAVE_BALANCE_DATE, CONF_PAYOUTS, CONF_KW_IGNORE,
-                            CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_ICS_URL):
+                            CONF_HOLIDAY_CALENDAR, CONF_HOLIDAY_FILTER, CONF_ICS_URL, CONF_NIGHT_WINDOW):
                     user_input.setdefault(key, "")
+                # per Service erfasste Auszahlungen stehen nicht im Formular -> erhalten
+                for key in (CONF_PAYOUT_ENTRIES,):
+                    if key in self.config_entry.options:
+                        user_input.setdefault(key, self.config_entry.options[key])
                 return self.async_create_entry(data=user_input)
             current.update(user_input)
         return self.async_show_form(step_id="init", data_schema=_schema(current), errors=errors)

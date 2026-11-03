@@ -74,7 +74,10 @@ Arbeitszeit-Kalender und optional Feiertags-Kalender wählen. Alles ist später 
 | `sensor.urlaub_rest`, `sensor.urlaub_jahr`, `sensor.urlaub_monat` | Urlaub |
 | `sensor.za_jahr`, `sensor.pflegeurlaub_jahr`, `sensor.krankenstand_jahr` | Abwesenheiten mit Tagesliste |
 | `sensor.abwesenheiten_jahr` | alle Abwesenheiten des Jahres mit Datum (Urlaub, ZA, Pflegeurlaub, Krankenstand) |
-| `sensor.za_ausbezahlt_jahr` | ausbezahlte Stunden |
+| `sensor.za_ausbezahlt_jahr` | ausbezahlte Stunden (Monat oder exaktes Datum) |
+| `sensor.zuschlaege_entgangen_stunden` / `_eur` | Schätzung der entgangenen 50 %/100 %-Zuschläge |
+| `sensor.azg_verstoesse_jahr` | Verstöße gegen AZG/ARG-Grenzen mit Datum |
+| `number.bruttomonatsgehalt` | Basis für den €-Wert der Zuschläge (0 = nur Stunden) |
 | `number.uberstunden_startsaldo` | Übertrag aus dem Vorjahr (editierbar) |
 | `number.resturlaub_stand` | Resturlaub laut Lohnzettel – beim Ändern wird das Stand-Datum auf heute gesetzt |
 | `text.ausbezahlter_za` | z. B. `Mai: 20h, August 16 Stunden` |
@@ -111,6 +114,54 @@ Beispiel für eine Markdown-Karte:
 ```
 
 Dienst `arbeitszeit_at.refresh` liest den Kalender sofort neu ein.
+
+## Ausbezahlte Überstunden mit Datum
+
+Im Textfeld `text.ausbezahlter_za` sind Monat und exaktes Datum mischbar:
+`15.05.2026: 20h, August 16 Stunden`. Datierte Auszahlungen zählen nur im eigenen Kalenderjahr
+und erst ab dem Auszahlungstag (künftige stehen unter `geplant_liste`).
+
+Ohne 255-Zeichen-Limit per Service:
+
+```yaml
+action: arbeitszeit_at.auszahlung_erfassen
+data:
+  datum: "2026-05-15"
+  stunden: 20
+```
+
+`arbeitszeit_at.auszahlung_entfernen` mit `datum` löscht einen Eintrag wieder.
+
+## Entgangene Überstundenzuschläge (Schätzung)
+
+Wer Überstunden nur 1:1 (ZA oder Auszahlung ohne Zuschlag) abgegolten bekommt, verliert die
+Zuschläge. Gerechnet wird je Kalenderwoche:
+
+- Überstunden = angerechnet − Soll (nur Wochen mit Plus, Minus-Wochen werden nicht gegengerechnet)
+- davon zuerst **100 %**: Arbeit an Sonn-/Feiertagen und im Nachtfenster (Standard 22:00–06:00)
+- Rest **50 %** (§ 10 AZG)
+- entgangen = 0,5 × h50 + 1,0 × h100 Stunden × Stundensatz
+- Stundensatz = Bruttomonatsgehalt / (Wochenstunden × 4,33) – bei 40 h also 1/173
+
+`entgangen_*_konservativ` deckelt auf das positive Jahres-Brutto (falls Minus-Wochen das Plus wieder
+ausgleichen). Nachtfenster und Sonn-/Feiertagsregel sind in den Optionen einstellbar – der
+Kollektivvertrag kann andere Zeiten/Sätze vorsehen.
+
+## AZG-/ARG-Verstöße
+
+`sensor.azg_verstoesse_jahr` prüft das laufende Jahr gegen:
+
+| Regel | Grenze |
+|---|---|
+| Tageshöchstarbeitszeit (§ 9 AZG) | 12 h |
+| Wochenhöchstarbeitszeit (§ 9 AZG) | 60 h |
+| Durchschnitt (§ 9 Abs. 4 AZG) | Ø 48 h über 17 Wochen |
+| Tägliche Ruhezeit (§ 12 AZG) | 11 h zwischen zwei Arbeitstagen |
+| Wochenruhe (§§ 3, 4 ARG) | 36 h am Stück pro Kalenderwoche |
+| Ruhepause (§ 11 AZG) | 30 min ab mehr als 6 h (abschaltbar) |
+
+Attribute: `eintraege` (Datum, Art, Wert, Grenze, Text), `summen` je Art, `letzter`, `monat_aktuell`.
+Die Pausenprüfung setzt voraus, dass Pausen im Kalender als Lücke eingetragen sind.
 
 ## Migration von per REST gesetzten Sensoren
 

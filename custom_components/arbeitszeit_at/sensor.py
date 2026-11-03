@@ -42,6 +42,9 @@ SENSORS: tuple[Desc, ...] = (
     Desc("krankenstand_jahr", "Krankenstand Jahr", D, "mdi:emoticon-sick-outline"),
     Desc("abwesenheiten_jahr", "Abwesenheiten Jahr", D, "mdi:calendar-account"),
     Desc("za_ausbezahlt_jahr", "Ausbezahlter ZA / Überstunden (Jahr)", H, "mdi:cash-clock"),
+    Desc("zuschlaege_entgangen_stunden", "Entgangene Überstundenzuschläge (h)", H, "mdi:cash-minus"),
+    Desc("zuschlaege_entgangen_eur", "Entgangene Überstundenzuschläge (€)", "EUR", "mdi:cash-remove"),
+    Desc("azg_verstoesse_jahr", "AZG-Verstöße Jahr", "Verstöße", "mdi:alert-octagon-outline"),
 )
 
 
